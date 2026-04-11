@@ -1,5 +1,6 @@
 let ytmusicInstance: any = null;
 let initPromise: Promise<void> | null = null;
+let lastInitError: string | null = null;
 
 async function getYTMusic() {
   if (ytmusicInstance) return ytmusicInstance;
@@ -7,20 +8,26 @@ async function getYTMusic() {
     await initPromise;
     return ytmusicInstance;
   }
+  
   initPromise = (async () => {
     try {
-      const { Innertube, UniversalCache } = await import('youtubei.js');
+      console.log('[youtubei.js] Initializing...');
+      const { Innertube } = await import('youtubei.js');
+      
+      // EXPLICITLY disable persistent cache for Vercel (read-only filesystem)
       ytmusicInstance = await Innertube.create({
-        cache: new UniversalCache(true),
         generate_session_locally: true,
         client_type: 'YTMUSIC' as any
       });
       console.log('[youtubei.js] Initialized successfully');
-    } catch (error) {
+      lastInitError = null;
+    } catch (error: any) {
       console.error('[youtubei.js] Failed to initialize:', error);
       ytmusicInstance = null;
+      lastInitError = error?.message || String(error);
     }
   })();
+  
   await initPromise;
   return ytmusicInstance;
 }
@@ -147,7 +154,7 @@ export default async function handler(req: any, res: any) {
   // Ensure ytmusic is initialized for all other endpoints
   try {
     const yt = await getYTMusic();
-    if (!yt) return sendError(res, 'youtubei.js not initialized', 503);
+    if (!yt) return sendError(res, `youtubei.js init failed: ${lastInitError || 'Check Vercel logs'}`, 503);
 
     const pathParts = pathname.replace('/api/ytmusic/', '').replace('/api/youtube', '').split('/');
 
