@@ -312,7 +312,10 @@ export default function InstancesPage() {
               } catch {}
               
               const proxyUrl = `/api/cors-proxy?url=${encodeURIComponent(targetUrl)}`;
-              const proxyRes = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
+              const authController = new AbortController();
+              const authTimeout = setTimeout(() => authController.abort(), 10000);
+              const proxyRes = await fetch(proxyUrl, { signal: authController.signal });
+              clearTimeout(authTimeout);
               const proxyData = await proxyRes.json();
               const latency = Date.now() - start;
               
@@ -338,9 +341,12 @@ export default function InstancesPage() {
             }
           }
 
-          const fetchOpts: RequestInit = { signal: AbortSignal.timeout(8000) };
+          const fetchController = new AbortController();
+          const fetchTimeout = setTimeout(() => fetchController.abort(), 8000);
+          const fetchOpts: RequestInit = { signal: fetchController.signal };
           if (Object.keys(headers).length > 0) fetchOpts.headers = headers;
           const res = await fetch(`${inst.url}${testPath}`, fetchOpts);
+          clearTimeout(fetchTimeout);
           const latency = Date.now() - start;
 
           let version: string | undefined;
