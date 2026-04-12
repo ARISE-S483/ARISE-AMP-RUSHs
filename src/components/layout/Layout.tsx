@@ -161,7 +161,7 @@ export function Layout() {
       {isMobile && <MobileNav />}
 
       {/* Floating player outside glass panel (z-[55]) */}
-      {!isMobile && <PlayerBar />}
+      <PlayerBar />
 
       {/* Search overlay (z-50) */}
       <SearchOverlay open={searchOpen} onClose={handleSearchClose} />

@@ -310,88 +310,105 @@ function PlayerTab({ activeTab, setActiveTab, onCollapse }: { activeTab: Fullscr
 
   if (isMobile) {
     return (
-      <div className="flex flex-col items-center w-full max-w-sm mx-auto px-6 flex-1 justify-between py-6">
-        {/* Top collapse bar */}
-        <div className="w-full flex items-center justify-between">
-            <button onClick={onCollapse} className="p-2 -ml-2 text-white/70 hover:text-white">
-                <ChevronDown size={28} />
-            </button>
-            <button className="p-2 -mr-2 text-white/70 hover:text-white">
-                <div className="flex gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-current" />
-                    <div className="w-1.5 h-1.5 rounded-full bg-current" />
-                    <div className="w-1.5 h-1.5 rounded-full bg-current" />
-                </div>
-            </button>
+      <div className="relative flex flex-col items-center w-full h-full flex-1 overflow-hidden">
+        {/* Dynamic Heavy Blur Background */}
+        <div className="absolute inset-0 -z-10 bg-black/40">
+          {currentTrack.thumbnail && (
+            <img
+              src={currentTrack.thumbnailLarge || currentTrack.thumbnail}
+              alt=""
+              className="w-full h-full object-cover blur-[80px] saturate-200 opacity-60"
+            />
+          )}
         </div>
-
-        {/* Title and Artist Centered */}
-        <div className="text-center w-full space-y-1 mt-4">
-          <h2 className="text-2xl font-semibold text-white tracking-wide truncate">{currentTrack.title}</h2>
-          <p className="text-sm font-light text-white/60 tracking-wider truncate">{currentTrack.artist?.name}</p>
-        </div>
-
-        {/* Massive Circular Art */}
-        <div className="flex-1 flex flex-col justify-center w-full max-h-[50vh]">
-          <div className="relative aspect-square w-full max-w-[320px] mx-auto rounded-full overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-[4px] border-white/5">
-            {currentTrack.thumbnail ? (
-              <img
-                src={currentTrack.thumbnailLarge || currentTrack.thumbnail}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                <Disc3 size={80} className="text-white/20" />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Controls Area */}
-        <div className="w-full space-y-8 pb-4">
-          <div className="w-full">
-            <ProgressBar />
+        
+        <div className="flex flex-col items-center w-full max-w-sm mx-auto px-6 flex-1 justify-between py-6 z-10 text-white">
+          {/* Top collapse bar */}
+          <div className="w-full flex items-center justify-between">
+              <button onClick={onCollapse} className="p-2 -ml-2 text-white/70 hover:text-white transition-colors">
+                  <ChevronDown size={28} />
+              </button>
+              <button className="p-2 -mr-2 text-white/70 hover:text-white transition-colors">
+                  <div className="flex gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                  </div>
+              </button>
           </div>
 
-          <div className="flex items-center justify-around translate-y-2">
-             <button onClick={previous} className="p-2 text-white/80 hover:text-white hover:scale-110 transition-transform">
-              <SkipBack size={32} fill="currentColor" />
-             </button>
-             <button
-              onClick={togglePlayPause}
-              className="p-4 text-white hover:scale-105 transition-transform"
-             >
-                {isLoading ? (
-                  <Loader2 size={40} className="animate-spin" />
-                ) : isPlaying ? (
-                  <Pause size={48} fill="currentColor" />
+          {/* Title and Artist Centered */}
+          <div className="text-center w-full mt-4 flex-shrink-0">
+            <h2 className="text-[22px] md:text-2xl font-semibold text-white tracking-wide truncate mb-1">{currentTrack.title}</h2>
+            <p className="text-[15px] font-medium text-white/50 tracking-wider truncate">{currentTrack.artist?.name}</p>
+          </div>
+
+          {/* Massive Circular Art - perfectly centered */}
+          <div className="flex-1 flex flex-col justify-center w-full py-4 min-h-0">
+            <div className="relative aspect-square w-full max-w-[340px] mx-auto rounded-full p-[6px] bg-white/5 backdrop-blur-sm shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
+              <div className="w-full h-full rounded-full overflow-hidden border-[6px] border-white/10">
+                {currentTrack.thumbnail ? (
+                  <img
+                    src={currentTrack.thumbnailLarge || currentTrack.thumbnail}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
-                  <Play size={48} fill="currentColor" className="ml-2" />
+                  <div className="w-full h-full bg-white/5 flex items-center justify-center">
+                    <Disc3 size={80} className="text-white/20" />
+                  </div>
                 )}
-             </button>
-             <button onClick={next} className="p-2 text-white/80 hover:text-white hover:scale-110 transition-transform">
-               <SkipForward size={32} fill="currentColor" />
-             </button>
+              </div>
+            </div>
           </div>
 
-          {/* Bottom Dock */}
-          <div className="flex items-center justify-between w-full pt-4">
-             <button onClick={toggleShuffle} className={`p-2 transition-colors ${isShuffled ? 'text-white' : 'text-white/40'}`}>
-                <Shuffle size={20} />
-             </button>
-             <button onClick={() => liked ? removeFromFavorites(String(currentTrack.id)) : addToFavorites(currentTrack)} className="p-2 transition-colors">
-                <Heart size={20} className={liked ? 'fill-white text-white' : 'text-white/40'} />
-             </button>
-             <button onClick={handleDownload} className="p-2 transition-colors text-white/40 hover:text-white">
-                <Download size={20} />
-             </button>
-             <button onClick={() => setActiveTab('lyrics')} className="p-2 transition-colors text-white/40 hover:text-white">
-                <Mic2 size={20} />
-             </button>
-             <button onClick={() => setActiveTab('queue')} className="p-2 transition-colors text-white/40 hover:text-white">
-                <ListMusic size={20} />
-             </button>
+          {/* Controls Area */}
+          <div className="w-full space-y-7 pb-2 flex-shrink-0">
+            {/* Progress Bar Container */}
+            <div className="w-full">
+              <ProgressBar mobileVariant={true} />
+            </div>
+
+            {/* Main Playback Controls */}
+            <div className="flex items-center justify-around translate-y-1">
+               <button onClick={previous} className="p-2 text-white hover:scale-110 object-contain transition-transform">
+                <SkipBack size={32} fill="currentColor" />
+               </button>
+               <button
+                onClick={togglePlayPause}
+                className="p-2 text-white hover:scale-105 transition-transform"
+               >
+                  {isLoading ? (
+                    <Loader2 size={46} className="animate-spin" />
+                  ) : isPlaying ? (
+                    <Pause size={46} fill="currentColor" />
+                  ) : (
+                    <Play size={46} fill="currentColor" className="ml-1" />
+                  )}
+               </button>
+               <button onClick={next} className="p-2 text-white hover:scale-110 object-contain transition-transform">
+                 <SkipForward size={32} fill="currentColor" />
+               </button>
+            </div>
+
+            {/* Bottom Dock / Action Bar */}
+            <div className="flex items-center justify-between w-full pt-6 opacity-70 hover:opacity-100 transition-opacity">
+               <button onClick={cycleRepeat} className={`p-2 transition-colors ${repeatMode !== 'off' ? 'text-white' : 'text-white/40'}`}>
+                  {repeatMode === 'one' ? <Repeat1 size={22} className="stroke-[1.5]" /> : <Repeat size={22} className="stroke-[1.5]" />}
+               </button>
+               <button onClick={() => liked ? removeFromFavorites(String(currentTrack.id)) : addToFavorites(currentTrack)} className="p-2 transition-colors">
+                  <Heart size={22} className={`stroke-[1.5] ${liked ? 'fill-white text-white' : 'text-white/40 hover:text-white'}`} />
+               </button>
+               <button onClick={handleDownload} className="p-2 transition-colors text-white/40 hover:text-white">
+                  <Download size={22} className="stroke-[1.5]" />
+               </button>
+               <button onClick={() => setActiveTab('lyrics')} className="p-2 transition-colors text-white/40 hover:text-white">
+                  <Mic2 size={22} className="stroke-[1.5]" />
+               </button>
+               <button onClick={() => setActiveTab('queue')} className="p-2 transition-colors text-white/40 hover:text-white">
+                  <ListMusic size={22} className="stroke-[1.5]" />
+               </button>
+            </div>
           </div>
         </div>
       </div>
