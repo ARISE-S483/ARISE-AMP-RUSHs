@@ -251,6 +251,7 @@ export default function InstancesManager() {
   const rapidapiKey = useRapidApiStore(state => state.rapidapiKey);
   const setRapidapiKey = useRapidApiStore(state => state.setRapidapiKey);
   const useYtdlpFirst = useSettingsStore(state => state.useYtdlpFirst);
+  const autoRefreshInstances = useSettingsStore(state => state.autoRefreshInstances);
   const setSetting = useSettingsStore(state => state.setSetting);
 
   const filtered = instances.filter(i => i.type === activeType);
@@ -413,8 +414,17 @@ export default function InstancesManager() {
 
   useEffect(() => {
     handleCheckAll();
+    let interval: NodeJS.Timeout;
+    if (autoRefreshInstances) {
+      interval = setInterval(() => {
+        if (!checking) handleCheckAll();
+      }, 60000); // Check every 60 seconds
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeType]);
+  }, [activeType, autoRefreshInstances]);
 
   const enabledCount = filtered.filter(i => i.enabled).length;
   const onlineCount = filtered.filter(i => i.status === 'online').length;
@@ -523,6 +533,34 @@ export default function InstancesManager() {
           </div>
         </div>
       )}
+
+      {/* Auto Refresh Toggle for all tabs */}
+      <div className="mb-6 p-4 rounded-xl border border-border/50 bg-secondary/10">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <RefreshCw size={14} className="text-primary" /> Auto-Refresh Server Status
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Automatically check the health of all instances every 60 seconds. Ensures the app instantly knows which servers are offline.
+            </p>
+          </div>
+          <button
+            onClick={() => setSetting('autoRefreshInstances', !autoRefreshInstances)}
+            className={`w-10 h-5 rounded-full transition-colors duration-200 relative shrink-0 ${
+              autoRefreshInstances ? 'bg-primary' : 'bg-secondary'
+            }`}
+          >
+            <motion.div
+              className={`absolute top-0.5 w-4 h-4 rounded-full ${
+                autoRefreshInstances ? 'bg-primary-foreground' : 'bg-muted-foreground'
+              }`}
+              animate={{ left: autoRefreshInstances ? 22 : 2 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            />
+          </button>
+        </div>
+      </div>
 
       {/* Type tabs */}
       <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">

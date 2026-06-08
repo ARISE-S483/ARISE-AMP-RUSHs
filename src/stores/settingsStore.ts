@@ -67,6 +67,7 @@ interface SettingsState {
 
   // Streaming
   useYtdlpFirst: boolean;
+  autoRefreshInstances: boolean;
 
   // Actions
   setSetting: <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void;
@@ -113,6 +114,7 @@ const defaultSettings = {
   showFavorites: true,
   showPlaylists: true,
   useYtdlpFirst: true,
+  autoRefreshInstances: false,
 };
 
 function loadSettings(): typeof defaultSettings {
