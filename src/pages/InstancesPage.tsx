@@ -309,7 +309,9 @@ export default function InstancesPage() {
               try { 
                  const urlObj = new URL(inst.url);
                  targetUrl = urlObj.origin; 
-              } catch {}
+              } catch (e) { 
+                 console.warn("Invalid URL in InstancesPage: ", inst.url, e);
+              }
               
               const proxyUrl = `/api/cors-proxy?url=${encodeURIComponent(targetUrl)}`;
               const authController = new AbortController();

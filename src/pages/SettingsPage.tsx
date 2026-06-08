@@ -201,7 +201,7 @@ export default function SettingsPage() {
       <div className="flex gap-6 flex-col md:flex-row">
         {/* Tab nav */}
         <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0 md:w-48 flex-shrink-0">
-          {tabs.map(tab => (
+          {tabs.filter(t => t.id !== 'integrations' && t.id !== 'instances').map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}

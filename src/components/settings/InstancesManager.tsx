@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import {
   Server, RefreshCw, Zap, Clock, AlertCircle,
@@ -410,6 +410,11 @@ export default function InstancesManager() {
     });
     setChecking(false);
   };
+
+  useEffect(() => {
+    handleCheckAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeType]);
 
   const enabledCount = filtered.filter(i => i.enabled).length;
   const onlineCount = filtered.filter(i => i.status === 'online').length;
