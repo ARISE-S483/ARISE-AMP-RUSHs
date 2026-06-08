@@ -49,8 +49,8 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/~oauth/],
       },
       manifest: {
-        name: "Melodies - Hi-Fi Music Streaming",
-        short_name: "Melodies",
+        name: "AMP - Hi-Fi Music Streaming",
+        short_name: "AMP",
         description: "High-quality lossless music streaming with lyrics, visualizer, and offline support",
         theme_color: "#0d0520",
         background_color: "#0d0520",
