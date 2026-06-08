@@ -476,12 +476,54 @@
   to { opacity: 1; }
 }
 
-/* Mobile bottom nav spacing */
+/* Mobile bottom nav spacing and Neon Purple Theme Overrides */
 @media (max-width: 767px) {
   :root {
     --sidebar-width: 0px;
     --player-height: 72px;
     --bottom-nav-height: 56px;
+
+    /* Neon Purple Theme Overrides for Mobile */
+    --background: 270 50% 3%;
+    --foreground: 0 0% 98%;
+
+    --card: 270 40% 6%;
+    --card-foreground: 0 0% 98%;
+    --card-hover: 270 40% 10%;
+
+    --popover: 270 40% 6%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 270 90% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 270 30% 10%;
+    --secondary-foreground: 270 20% 75%;
+
+    --muted: 270 30% 12%;
+    --muted-foreground: 270 20% 60%;
+
+    --accent: 280 80% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --border: 270 60% 50% / 0.15;
+    --input: 270 30% 12%;
+    --ring: 270 90% 65%;
+
+    --highlight: 270 90% 65%;
+    --highlight-rgb: 170, 80, 255;
+    --highlight-glow: 0 0 32px rgba(170, 80, 255, 0.4);
+
+    --glass-panel-bg: rgba(25, 10, 40, var(--glass-opacity));
+    --glass-bg: rgba(25, 10, 40, calc(var(--glass-opacity) + 0.15));
+    --glass-thick-bg: linear-gradient(135deg, rgba(120, 60, 200, 0.15) 0%, rgba(170, 80, 255, 0.06) 30%, rgba(255, 80, 255, 0.03) 70%, rgba(40, 10, 80, 0.10) 100%);
+    --glass-sidebar-bg: rgba(25, 10, 40, calc(var(--glass-opacity) + 0.12));
+    --glass-panel-shadow: 0 4px 32px rgba(170, 80, 255, 0.2);
+  }
+
+  body {
+    background: radial-gradient(circle at 50% 0%, rgba(130, 40, 220, 0.2) 0%, hsl(270, 50%, 3%) 50%, hsl(270, 50%, 3%) 100%) !important;
+    background-attachment: fixed !important;
   }
 }
 

@@ -35,17 +35,11 @@ export default function HomePage() {
     >
       {isMobile && (
         <div className="flex flex-col gap-5 mb-2 mt-2">
-           <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-100 to-white pl-1">Discover</h1>
-              <Search className="text-white/70" size={24} />
-           </div>
-           
            <div className="flex gap-5 overflow-x-auto scrollbar-none pb-1 text-sm font-medium whitespace-nowrap pl-1">
-              <span className="text-white border-b-2 border-white pb-1 tracking-wide">Film Score</span>
-              <span className="text-white/50 tracking-wide">Musical Theatre</span>
-              <span className="text-white/50 tracking-wide">Video Games</span>
-              <span className="text-white/50 tracking-wide">Classical</span>
-              <span className="text-white/50 tracking-wide">Pop</span>
+              <span className="text-white border-b-2 border-white pb-1 tracking-wide">Bollywood Hits</span>
+              <span className="text-white/50 tracking-wide">New Releases</span>
+              <span className="text-white/50 tracking-wide">Top Charts</span>
+              <span className="text-white/50 tracking-wide">Discovery</span>
            </div>
         </div>
       )}
