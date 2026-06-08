@@ -273,7 +273,11 @@ export function PlayerBar() {
                     <p className="text-xs text-muted-foreground truncate">{currentTrack.artist?.name}</p>
                   </Link>
                 </div>
-                <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
+                  <LiveRadioButton />
+                  <button onClick={toggleQueue} className={`p-1.5 transition-colors ${isQueueOpen ? 'text-primary' : 'text-muted-foreground'}`}>
+                    <ListMusic size={16} />
+                  </button>
                   <button onClick={() => { liked ? removeFromFavorites(String(currentTrack.id)) : addToFavorites(currentTrack); }} className="p-1.5">
                     <Heart size={16} className={liked ? 'fill-primary text-primary' : 'text-muted-foreground'} />
                   </button>
