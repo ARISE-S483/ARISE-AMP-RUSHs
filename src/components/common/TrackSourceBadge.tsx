@@ -17,21 +17,24 @@ export function TrackSourceBadge({ track }: TrackSourceBadgeProps) {
   if (audioQuality.includes('ATMOS') || audioQuality.includes('AC4') || audioQuality.includes('EAC3')) {
     label = 'ATMOS';
     colorClass = 'bg-purple-500/20 text-purple-400 border-purple-500/40';
-  } else if (audioQuality === 'HI_RES_LOSSLESS' || audioQuality === 'MAX') {
+  } else if (audioQuality === 'HI_RES_LOSSLESS' || audioQuality === 'MAX' || audioQuality === 'HI_RES') {
     label = 'HI-RES';
     colorClass = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
-  } else if (audioQuality === 'LOSSLESS' || sourceStr === 'tidal') {
+  } else if (audioQuality === 'LOSSLESS' || audioQuality === 'FLAC') {
     label = 'FLAC';
     colorClass = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
-  } else if (audioQuality === 'HIGH' || audioQuality === 'MP3_320') {
-    label = '320K';
-    colorClass = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
-  } else if (sourceStr === 'youtube' || sourceStr === 'piped') {
+  } else if (audioQuality.includes('OPUS') || audioQuality.includes('FFMPEG_OPUS')) {
     label = 'OPUS';
-    colorClass = 'bg-red-500/20 text-red-400 border-red-500/30';
-  } else if (sourceStr === 'jiosaavn') {
-    label = '320K';
-    colorClass = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+    colorClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+  } else if (audioQuality === 'HIGH' || audioQuality.includes('AAC')) {
+    label = 'AAC';
+    colorClass = 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+  } else if (audioQuality === 'LOW' || audioQuality.includes('MP3') || audioQuality === 'MP3_320') {
+    label = 'MP3';
+    colorClass = 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40';
+  } else if (sourceStr === 'tidal') {
+    label = 'FLAC';
+    colorClass = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
   } else if (sourceStr) {
     label = sourceStr;
     colorClass = 'bg-white/10 text-white/70 border-white/20';

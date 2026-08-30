@@ -15,6 +15,8 @@ const CANONICAL_INSTANCES = {
         { url: "https://maus.qqdl.site", isUser: false },
         { url: "https://vogel.qqdl.site", isUser: false },
         { url: "https://hund.qqdl.site", isUser: false },
+        { url: "https://katze.qqdl.site", isUser: false },
+        { url: "https://tidal.qqdl.site", isUser: false },
         { url: "https://tidal.kinoplus.online", isUser: false }
     ],
     streaming: [
@@ -25,6 +27,7 @@ const CANONICAL_INSTANCES = {
         { url: "https://vogel.qqdl.site", isUser: false },
         { url: "https://katze.qqdl.site", isUser: false },
         { url: "https://hund.qqdl.site", isUser: false },
+        { url: "https://tidal.qqdl.site", isUser: false },
         { url: "https://hifi.p1nkhamster.xyz/", isUser: false }
     ]
 };

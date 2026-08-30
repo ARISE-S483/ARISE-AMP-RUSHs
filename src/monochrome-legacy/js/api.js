@@ -169,6 +169,39 @@ export class LosslessAPI {
                         continue;
                     }
 
+                    // Handle binimum/hifi-api 202 Accepted Playback Queue
+                    if (response.status === 202) {
+                        try {
+                            const queueData = await response.clone().json().catch(() => null);
+                            const statusPath = queueData?.statusUrl || response.headers.get('Location') || (queueData?.requestId ? `/playback/requests/${queueData.requestId}` : null);
+                            if (statusPath) {
+                                const pollUrl = statusPath.startsWith('http')
+                                    ? statusPath
+                                    : (baseUrl.endsWith('/') ? `${baseUrl}${statusPath.substring(1)}` : `${baseUrl}${statusPath}`);
+                                const startPoll = Date.now();
+                                let resolvedResp = null;
+                                while (Date.now() - startPoll < 25000) {
+                                    await delay(1000);
+                                    if (options.signal?.aborted) break;
+                                    const pollResp = await fetch(pollUrl, { signal: options.signal });
+                                    if (pollResp.status === 200) {
+                                        resolvedResp = pollResp;
+                                        break;
+                                    } else if (pollResp.status === 202) {
+                                        continue;
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                if (resolvedResp) {
+                                    return resolvedResp;
+                                }
+                            }
+                        } catch (e) {
+                            console.warn(`Error handling hifi-api 202 queue on ${baseUrl}:`, e);
+                        }
+                    }
+
                     if (response.ok) {
                         return response;
                     }

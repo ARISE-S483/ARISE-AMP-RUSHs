@@ -33,11 +33,17 @@ const DEFAULT_INSTANCES: InstanceEntry[] = [
   { url: 'https://katze.qqdl.site', type: 'api', enabled: true },
   { url: 'https://hund.qqdl.site', type: 'api', enabled: true },
   { url: 'https://wolf.qqdl.site', type: 'api', enabled: true },
+  { url: 'https://tidal.qqdl.site', type: 'api', enabled: true },
   { url: 'https://hifi-one.spotisaver.net', type: 'api', enabled: true },
   // Streaming
   { url: 'https://arran.monochrome.tf', type: 'streaming', enabled: true },
   { url: 'https://triton.squid.wtf', type: 'streaming', enabled: true },
   { url: 'https://maus.qqdl.site', type: 'streaming', enabled: true },
+  { url: 'https://wolf.qqdl.site', type: 'streaming', enabled: true },
+  { url: 'https://vogel.qqdl.site', type: 'streaming', enabled: true },
+  { url: 'https://katze.qqdl.site', type: 'streaming', enabled: true },
+  { url: 'https://hund.qqdl.site', type: 'streaming', enabled: true },
+  { url: 'https://tidal.qqdl.site', type: 'streaming', enabled: true },
   // Piped (YouTube Music)
   { url: 'https://pipedapi.kavin.rocks', type: 'streaming', enabled: true },
   { url: 'https://pipedapi.r4fo.com', type: 'streaming', enabled: true },

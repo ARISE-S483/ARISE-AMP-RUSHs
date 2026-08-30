@@ -17,6 +17,8 @@ const MONOCHROME_API_INSTANCES = [
   "https://maus.qqdl.site",
   "https://vogel.qqdl.site",
   "https://hund.qqdl.site",
+  "https://katze.qqdl.site",
+  "https://tidal.qqdl.site",
   "https://tidal.kinoplus.online"
 ];
 
@@ -28,6 +30,7 @@ const MONOCHROME_STREAMING_INSTANCES = [
   "https://vogel.qqdl.site",
   "https://katze.qqdl.site",
   "https://hund.qqdl.site",
+  "https://tidal.qqdl.site",
   "https://hifi.p1nkhamster.xyz/"
 ];
 
