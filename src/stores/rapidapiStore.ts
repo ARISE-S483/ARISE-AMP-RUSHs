@@ -10,7 +10,7 @@ interface RapidApiState {
 export const useRapidApiStore = create<RapidApiState>()(
   persist(
     (set) => ({
-      rapidapiKey: 'c3389df2admshb2bb562e9c3ef4ep1352f5jsn590784329e57',
+      rapidapiKey: '',
       setRapidapiKey: (key) => set({ rapidapiKey: key }),
       clearRapidapiKey: () => set({ rapidapiKey: '' }),
     }),
