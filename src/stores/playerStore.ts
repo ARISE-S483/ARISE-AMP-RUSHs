@@ -1,5 +1,6 @@
 // Player store - manages audio playback, queue, shuffle, repeat, radio, preload, sleep timer
 import { create } from 'zustand';
+import { equalizer } from '../api/equalizer';
 import { hifiAPI } from '@/api/piped';
 import { musicAPI } from '@/api/musicAPI';
 import { ytmusicClient } from '@/api/ytmusicClient';
@@ -223,7 +224,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
       const source = ctx.createMediaElementSource(state.audioElement);
-      source.connect(analyser);
+      
+      equalizer.init(ctx, source, state.audioElement);
+      
+      // Routing: Source -> EQ Input => EQ Output -> Analyser -> Destination
+      if (equalizer.inputNode && equalizer.outputNode) {
+        source.connect(equalizer.inputNode);
+        equalizer.outputNode.connect(analyser);
+      } else {
+        source.connect(analyser);
+      }
+      
       analyser.connect(ctx.destination);
       set({ audioContext: ctx, analyserNode: analyser });
     } catch (e) {

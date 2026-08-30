@@ -5,6 +5,7 @@ import {
   LayoutDashboard, RotateCcw, ChevronRight, Server, Radio, Brush, Database, Upload, FolderDown,
   User, Headphones
 } from 'lucide-react';
+import { EQStudio } from '../components/settings/EQStudio';
 import { exportLibrary, importLibrary } from '@/lib/syncExport';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useThemeStore, applyTheme } from '@/stores/themeStore';
@@ -411,6 +412,7 @@ export default function SettingsPage() {
                   <SettingRow label="EQ Studio" description="Multi-mode equalizer with AutoEQ, M/S processing & room correction">
                     <Toggle checked={settings.equalizerEnabled} onChange={(v) => setSetting('equalizerEnabled', v)} />
                   </SettingRow>
+                  {settings.equalizerEnabled && <EQStudio />}
                 </div>
               )}
 

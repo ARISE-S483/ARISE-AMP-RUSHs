@@ -12,6 +12,7 @@ import { shazamClient } from './shazamClient';
 import { spotify23Client } from './spotify23Client';
 import { cobaltClient } from './cobaltClient';
 import type { Track, Artist, Album, Playlist, SearchResults } from './types';
+import { monoSearch, monoGetTrack, monoGetAlbum } from './monochromeBridge';
 
 // ========== Deduplication ==========
 
@@ -127,75 +128,28 @@ class MusicAPI {
         };
       }
     }
+    const signalPromise = new Promise((_, reject) => {
+      if (signal) {
+        signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+      }
+    });
 
-    // Initiate search requests across all services concurrently
-    const [ytmResults, ytmVideoResults, pipedResults, tidalResults, saavnResults, rapidapiResults, deezerResults, shazamResults, spotifyResults] = await Promise.allSettled([
-      ytmusicClient.searchSongs(query, signal).then(tracks => ({ tracks, artists: [], albums: [], playlists: [] })),
-      ytmusicClient.searchVideos(query, signal),
-      pipedClient.search(query, signal),
-      hifiAPI.search(query, signal),
-      jiosaavnClient.search(query, signal),
-      rapidapiClient.searchTracks(query, signal),
-      deezerClient.searchTracks(query, signal),
-      shazamClient.searchTracks(query, signal),
-      spotify23Client.searchTracks(query, signal)
-    ]);
-
-    const ytmTracks = ytmResults.status === 'fulfilled' ? ytmResults.value.tracks : [];
-    const ytmVideos = ytmVideoResults.status === 'fulfilled' ? ytmVideoResults.value : [];
-    const pipedTracks = pipedResults.status === 'fulfilled' ? pipedResults.value.tracks : [];
-    const tidalTracks = tidalResults.status === 'fulfilled' ? tidalResults.value.tracks : [];
-    const saavnTracks = saavnResults.status === 'fulfilled' ? saavnResults.value.tracks : [];
-    const rapidapiTracks = rapidapiResults.status === 'fulfilled' ? rapidapiResults.value : [];
-    const deezerTracks = deezerResults.status === 'fulfilled' ? deezerResults.value : [];
-    const shazamTracks = shazamResults.status === 'fulfilled' ? shazamResults.value : [];
-    const spotifyTracks = spotifyResults.status === 'fulfilled' ? spotifyResults.value : [];
-
-    // 8 sources: YT Music → Piped → TIDAL → JioSaavn → FreeYourMusic → Deezer → Shazam → Spotify
-    // Show ALL available results (no limit) - deduplicated in optimal ranking order
-    const allTracks = deduplicateTracks([...ytmTracks, ...pipedTracks, ...tidalTracks, ...saavnTracks, ...rapidapiTracks, ...deezerTracks, ...shazamTracks, ...spotifyTracks]);
-
-    // Deduplicate videos
-    const allVideos = deduplicateTracks(ytmVideos);
-
-    // Merge artists/albums/playlists from all sources
-    const pipedArtists = pipedResults.status === 'fulfilled' ? pipedResults.value.artists : [];
-    const tidalArtists = tidalResults.status === 'fulfilled' ? tidalResults.value.artists : [];
-    const pipedAlbums = pipedResults.status === 'fulfilled' ? pipedResults.value.albums : [];
-    const tidalAlbums = tidalResults.status === 'fulfilled' ? tidalResults.value.albums : [];
-    const pipedPlaylists = pipedResults.status === 'fulfilled' ? pipedResults.value.playlists : [];
-    const tidalPlaylists = tidalResults.status === 'fulfilled' ? tidalResults.value.playlists : [];
-
-    // Combine and deduplicate artists
-    const allArtists = [...pipedArtists, ...tidalArtists];
-    const uniqueArtists = Array.from(
-      new Map(allArtists.map(a => [String(a.id).toLowerCase() + a.name.toLowerCase(), a])).values()
-    );
-
-    // Combine and deduplicate albums
-    const allAlbums = [...pipedAlbums, ...tidalAlbums];
-    const uniqueAlbums = Array.from(
-      new Map(allAlbums.map(a => [String(a.id).toLowerCase() + a.title.toLowerCase(), a])).values()
-    );
-
-    // Combine and deduplicate playlists
-    const allPlaylists = [...pipedPlaylists, ...tidalPlaylists];
-    const uniquePlaylists = Array.from(
-      new Map(allPlaylists.map(p => [String(p.id).toLowerCase() + p.title.toLowerCase(), p])).values()
-    );
-
-    return {
-      tracks: allTracks, // Show ALL tracks
-      videos: allVideos,
-      artists: uniqueArtists,
-      albums: uniqueAlbums,
-      playlists: uniquePlaylists,
-    };
+    const searchPromise = monoSearch(query);
+    const result = await Promise.race([searchPromise, signalPromise]) as SearchResults;
+    return result;
   }
 
   async searchTracks(query: string, signal?: AbortSignal): Promise<Track[]> {
     const results = await this.search(query, signal);
     return results.tracks;
+  }
+
+  async getTrack(id: string): Promise<Track> {
+    return monoGetTrack(id);
+  }
+
+  async getAlbum(id: string): Promise<Album> {
+    return monoGetAlbum(id);
   }
 
   async searchArtists(query: string, signal?: AbortSignal): Promise<Artist[]> {
