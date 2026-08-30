@@ -44,36 +44,12 @@ class MusicAPI {
 
   // ===== Search =====
   async search(query: string, signal?: AbortSignal): Promise<SearchResults> {
-    // ─── Direct YouTube URL Parsing ───
-    const ytMatch = query.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-    if (ytMatch && ytMatch[1]) {
-      const videoId = ytMatch[1];
-      try {
-        const track = await pipedClient.getTrackDetails(videoId);
-        if (track) {
-          return {
-            tracks: [track],
-            videos: [track],
-            artists: [],
-            albums: [],
-            playlists: []
-          };
-        }
-      } catch { /* fall through to normal search */ }
-    }
-
     try {
       const result = await monoSearch(query);
       return result;
     } catch (e) {
-      console.warn('[musicAPI] Monochrome search failed, falling back:', e);
-      // Fallback: try YTMusic search
-      try {
-        const tracks = await ytmusicClient.searchSongs(query);
-        return { tracks, albums: [], artists: [], playlists: [] };
-      } catch {
-        return { tracks: [], albums: [], artists: [], playlists: [] };
-      }
+      console.error('[musicAPI] Monochrome search failed:', e);
+      return { tracks: [], albums: [], artists: [], playlists: [], videos: [] };
     }
   }
 
@@ -81,9 +57,7 @@ class MusicAPI {
     try {
       return await monoSearchTracks(query);
     } catch {
-      // Fallback
-      const results = await this.search(query, signal);
-      return results.tracks;
+      return [];
     }
   }
 
@@ -113,19 +87,8 @@ class MusicAPI {
 
   // ===== Suggestions =====
   async getSuggestions(query: string): Promise<string[]> {
-    // Try YT Music suggestions (best music-specific results)
-    try {
-      const ytmSuggestions = await ytmusicClient.getSuggestions(query);
-      if (ytmSuggestions.length > 0) return ytmSuggestions;
-    } catch { /* fallback */ }
-
-    // Then Piped
-    try {
-      const suggestions = await pipedClient.getSuggestions(query);
-      if (suggestions.length > 0) return suggestions;
-    } catch { /* fallback */ }
-
-    return hifiAPI.getSuggestions(query);
+    // Monochrome does not natively expose a getSuggestions method.
+    return [];
   }
 
   // ===== Get Track =====
@@ -146,39 +109,15 @@ class MusicAPI {
     } catch (e) {
       console.warn('[musicAPI] monoGetArtist failed:', e);
     }
-
-    // Fallback: Synthetic YTMusic artist profile
-    const query = String(id).replace(/^(ytm_|piped_|spotify_|jiosaavn_)/, '').replace(/-/g, ' ');
-    try {
-      const tracks = await ytmusicClient.searchSongs(query);
-      if (tracks.length > 0) {
-        const bestTrack = tracks.find((t: Track) => t.thumbnailLarge) || tracks[0];
-        return {
-          id: String(id),
-          name: typeof id === 'string' && !id.includes('_') ? id : (bestTrack.artist?.name || query),
-          thumbnail: bestTrack.thumbnail || bestTrack.thumbnailLarge || '',
-          thumbnailLarge: bestTrack.thumbnailLarge || bestTrack.thumbnail || '',
-          tracks: tracks.slice(0, 15),
-          albums: [],
-          description: 'Artist profile generated via YouTube Music catalog.',
-        };
-      }
-    } catch (e) {
-      console.error('Failed to generate YTMusic artist profile:', e);
-    }
-
     return null;
   }
 
   // ===== Get Playlist =====
-  async getPlaylist(id: string): Promise<Playlist> {
+  async getPlaylist(id: string): Promise<Playlist | null> {
     try {
       return await monoGetPlaylist(id);
     } catch {
-      const res = await hifiAPI.getPlaylist(id) as any;
-      const pl = res?.playlist || res;
-      if (pl?.tracks === undefined && res?.tracks) pl.tracks = res.tracks;
-      return pl;
+      return null;
     }
   }
 
@@ -240,118 +179,36 @@ class MusicAPI {
   }
 
   // ===== Recommendations =====
-  async getTrackRecommendations(track: Track): Promise<Track[]> {
+  async getUpNexts(track: Track): Promise<Track[]> {
     try {
-      const recs = await monoGetTrackRecommendations(track.id);
-      if (recs.length > 0) return recs;
-    } catch { /* fallback */ }
-
-    // Fallback: YT Music Up Next
-    try {
-      let videoId = track.videoId;
-      if (!videoId) {
-        const pipedSearch = await pipedClient.searchTracks(`${track.title} ${track.artist?.name || ''}`);
-        if (pipedSearch.length > 0 && pipedSearch[0].videoId) {
-          videoId = pipedSearch[0].videoId;
-        }
-      }
-      if (videoId) {
-        return ytmusicClient.getUpNexts(videoId);
+      if (track.id) {
+        return await monoGetTrackRecommendations(track.id);
       }
     } catch { /* continue */ }
-
     return [];
   }
 
+  // ===== Home Recommendations =====
   // ===== Home Recommendations =====
   async getHomeRecommendations(recentTracks: Track[]): Promise<{
     songs: Track[];
     albums: Album[];
     artists: Artist[];
   }> {
-    const [pipedTrending, tidalRecs] = await Promise.allSettled([
-      pipedClient.getTrending(),
-      hifiAPI.getHomeRecommendations(recentTracks),
-    ]);
-
-    const trending = pipedTrending.status === 'fulfilled' ? pipedTrending.value : [];
-    const tidalData = tidalRecs.status === 'fulfilled' ? tidalRecs.value : { songs: [], albums: [], artists: [] };
-
+    // Monochrome doesn't have a direct home recommendations method.
+    // Return empty placeholders.
     return {
-      songs: [...trending, ...tidalData.songs].slice(0, 25),
-      albums: tidalData.albums,
-      artists: tidalData.artists,
+      songs: [],
+      albums: [],
+      artists: [],
     };
   }
 
   // ===== Trending =====
+  // ===== Trending =====
   async getTrending(region: string = 'IN'): Promise<Track[]> {
-    try {
-      const resp = await fetch('/api/ytmusic/trending');
-      const data = await resp.json();
-      const items = Array.isArray(data) ? data : [];
-      return items.filter((item: any) => item.type === 'MusicResponsiveListItem' || item.type === 'SONG' || item.type === 'VIDEO').map((item: any) => {
-        const title = (item.title as any)?.text || (item.title as string) || (item.name as string) || 'Unknown Track';
-        
-        let artistName = 'Unknown Artist';
-        let artistsList: { id: number; name: string }[] = [];
-        
-        const artistsData = item.artists || item.authors || item.artist || item.author;
-        if (typeof artistsData === 'string') {
-          artistName = artistsData;
-          artistsList = [{ id: 0, name: artistName }];
-        } else if (Array.isArray(artistsData) && artistsData.length > 0) {
-          artistName = artistsData[0].name || 'Unknown Artist';
-          artistsList = artistsData.map((a: any) => ({ id: 0, name: a.name || 'Unknown Artist' }));
-        } else if (artistsData && typeof artistsData === 'object' && 'name' in (artistsData as Record<string, any>)) {
-          artistName = (artistsData as any).name || 'Unknown Artist';
-          artistsList = [{ id: 0, name: artistName }];
-        }
-
-        let thumbnail = '';
-        let thumbnailLarge = '';
-        
-        let thumbArr: any[] = [];
-        if (Array.isArray(item.thumbnails)) {
-          thumbArr = item.thumbnails;
-        } else if (item.thumbnail && Array.isArray((item.thumbnail as any).contents)) {
-          thumbArr = (item.thumbnail as any).contents;
-        } else if (Array.isArray(item.thumbnail)) {
-          thumbArr = item.thumbnail;
-        }
-
-        if (thumbArr && thumbArr.length > 0) {
-          const sortedThumbs = [...thumbArr].sort((a, b) => (b.width || 0) - (a.width || 0));
-          thumbnail = sortedThumbs[sortedThumbs.length - 1]?.url || '';
-          thumbnailLarge = sortedThumbs[0]?.url || thumbnail;
-        } else if (typeof item.thumbnail === 'string') {
-          thumbnail = item.thumbnail;
-          thumbnailLarge = thumbnail;
-        }
-
-        const resolvedVideoId = (item.videoId as string) || (item.video_id as string) || (item.id as string) || (item.endpoint?.payload?.videoId as string) || '';
-        
-        if (!thumbnail && resolvedVideoId) {
-          thumbnail = `https://i.ytimg.com/vi/${resolvedVideoId}/hqdefault.jpg`;
-          thumbnailLarge = `https://i.ytimg.com/vi/${resolvedVideoId}/maxresdefault.jpg`;
-        }
-
-        return {
-          id: `ytm_${resolvedVideoId}`,
-          title,
-          artist: { id: 0, name: artistName },
-          artists: artistsList,
-          duration: 0,
-          thumbnail: thumbnail || '',
-          thumbnailLarge: thumbnailLarge || thumbnail || '',
-          source: 'piped' as const,
-          videoId: resolvedVideoId,
-          type: 'track' as const,
-        };
-      });
-    } catch {
-      return pipedClient.getTrending(region);
-    }
+    // Return empty for Trending as Monochrome doesn't have a direct trending endpoint.
+    return [];
   }
 
   // ===== Playlist-based recommendations =====
@@ -362,21 +219,7 @@ class MusicAPI {
   ): Promise<Track[]> {
     const allRecs: Track[] = [];
 
-    // 1. YouTube Music (Primary)
-    const ytSeeds = seedTracks.filter(t => t.videoId).slice(0, 5);
-    for (const seed of ytSeeds) {
-      try {
-        const related = await ytmusicClient.getUpNexts(seed.videoId!);
-        if (related.length > 0) {
-          allRecs.push(...related);
-        } else {
-          const pipedRelated = await pipedClient.getRelatedTracks(seed.videoId!);
-          allRecs.push(...pipedRelated);
-        }
-      } catch { /* continue */ }
-    }
-
-    // 2. Monochrome recommendations
+    // Monochrome recommendations
     for (const seed of seedTracks.slice(0, 3)) {
       try {
         const recs = await monoGetTrackRecommendations(seed.id);
@@ -394,46 +237,32 @@ class MusicAPI {
 
   // ===== Track Info =====
   async getTrackInfo(id: number | string) {
-    return hifiAPI.getTrackInfo(id);
+    return monoGetTrack(id);
   }
 
   // ===== Lyrics =====
+  // ===== Lyrics =====
   async getLyrics(title: string, artist: string, album?: string, duration?: number) {
-    // Try primary sources first (lrclib → lyrics.ovh)
-    const primary = await hifiAPI.getLyrics(title, artist, album, duration);
-
-    // If we got synced lyrics from primary, use them
-    if (primary && primary.synced) return primary;
-
-    // Try Musixmatch for synced lyrics
     try {
       const { musixmatchClient } = await import('./musixmatchClient');
       const mxmResult = await musixmatchClient.getLyrics(title, artist);
       if (mxmResult && mxmResult.synced) return mxmResult;
     } catch { /* Musixmatch unavailable */ }
-
-    return primary;
+    return null;
   }
 
   // ===== Cover Art =====
+  // ===== Cover Art =====
   getCoverUrl(coverId: string | undefined, size: number = 640) {
-    // Try monochrome first
-    const monoUrl = monoGetCoverUrl(coverId, String(size));
-    if (monoUrl) return monoUrl;
-    return hifiAPI.getCoverUrl(coverId, size);
+    return monoGetCoverUrl(coverId, String(size)) || '';
   }
 
   getArtistPictureUrl(pictureId: string | undefined, size?: number) {
-    const monoUrl = monoGetArtistPictureUrl(pictureId, String(size || 320));
-    if (monoUrl) return monoUrl;
-    return hifiAPI.getArtistPictureUrl(pictureId, size);
+    return monoGetArtistPictureUrl(pictureId, String(size || 320)) || '';
   }
 
   clearCache() {
-    hifiAPI.clearCache();
-    pipedClient.clearCache();
-    jiosaavnClient.clearCache();
-    ytmusicClient.clearCache();
+    // No-op for now. Monochrome handles its own cache.
   }
 }
 

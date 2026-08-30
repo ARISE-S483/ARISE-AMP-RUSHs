@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { musicAPI } from '@/api/musicAPI';
-import { ytmusicClient } from '@/api/ytmusicClient';
 import { usePlayerStore } from '@/stores/playerStore';
 import { useLibraryStore } from '@/stores/libraryStore';
 import type { Track, Album, Artist } from '@/api/types';
@@ -113,7 +112,7 @@ function useTrackQuery(queries: string[], limit = 15) {
   useEffect(() => {
     (async () => {
       try {
-        const results = await Promise.allSettled(queries.map(q => ytmusicClient.searchSongs(q)));
+        const results = await Promise.allSettled(queries.map(q => musicAPI.searchTracks(q)));
         const all: Track[] = [];
         const seen = new Set<string>();
         for (const r of results) {
@@ -144,15 +143,15 @@ function useYTMPlaylist(playlistQuery: string, fallbackQueries: string[], limit 
     let cancelled = false;
     (async () => {
       try {
-        // Primary: real-time official playlist
-        const plTracks = await ytmusicClient.getOfficialPlaylistTracks(playlistQuery, limit);
+        // Primary: just search using musicAPI (Monochrome doesn't support fetching playlists by ID directly easily like this)
+        const plTracks: Track[] = [];
         if (!cancelled && plTracks.length > 0) {
           setTracks(plTracks);
           setLoading(false);
           return;
         }
-        // Fallback: keyword search (same as before)
-        const results = await Promise.allSettled(fallbackQueries.map(q => ytmusicClient.searchSongs(q)));
+        // Fallback: keyword search
+        const results = await Promise.allSettled(fallbackQueries.map(q => musicAPI.searchTracks(q)));
         const all: Track[] = [];
         const seen = new Set<string>();
         for (const r of results) {
@@ -207,7 +206,7 @@ function useArtistQuery(names: string[]) {
   useEffect(() => {
     (async () => {
       try {
-        const results = await Promise.allSettled(names.map(q => ytmusicClient.searchArtists(q)));
+        const results = await Promise.allSettled(names.map(q => musicAPI.searchArtists(q)));
         const all: Artist[] = [];
         const seen = new Set<string>();
         for (const r of results) {
@@ -297,7 +296,7 @@ export function MadeForYou() {
           const fallbackQueries = ['Viral Hits', 'Top Tracks currently', 'Global Pop top tracks', 'Chill vibes playlist'];
           const randomQuery = fallbackQueries[Math.floor(Math.random() * fallbackQueries.length)];
           try {
-            const searchResults = await ytmusicClient.searchSongs(randomQuery);
+            const searchResults = await musicAPI.searchTracks(randomQuery);
             if (!cancelled && searchResults.length > 0) {
               setTracks(searchResults.slice(0, 25));
             } else if (!cancelled) {

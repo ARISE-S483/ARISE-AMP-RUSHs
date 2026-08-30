@@ -3,8 +3,6 @@ import { create } from 'zustand';
 import { equalizer } from '../api/equalizer';
 // hifiAPI no longer used directly — streaming goes through musicAPI → monochrome bridge
 import { musicAPI } from '@/api/musicAPI';
-import { ytmusicClient } from '@/api/ytmusicClient';
-import { pipedClient } from '@/api/pipedClient';
 import { lastfmClient } from '@/api/lastfmClient';
 import type { Track, RepeatMode } from '@/api/types';
 import { useSettingsStore } from './settingsStore';
@@ -696,30 +694,9 @@ async function loadRecommendations(
     loadingRecommendations = true;
     let newTracks: Track[] = [];
 
-    // 1. Primary: YTMusic Up Next (YouTube Music-style autoplay queue)
-    let videoId = currentTrack.videoId || null;
-
-    // If no videoId, search YTMusic to find one
-    if (!videoId) {
-      try {
-        const query = `${currentTrack.title} ${currentTrack.artist?.name || ''}`;
-        const ytmSearch = await ytmusicClient.searchSongs(query);
-        if (ytmSearch.length > 0 && ytmSearch[0].videoId) {
-          videoId = ytmSearch[0].videoId;
-        } else {
-          // Try Piped to find videoId
-          const pipedSearch = await pipedClient.searchTracks(query);
-          if (pipedSearch.length > 0 && pipedSearch[0].videoId) {
-            videoId = pipedSearch[0].videoId;
-          }
-        }
-      } catch { /* continue */ }
-    }
-
-    if (videoId) {
-      try {
-        // Fetch up to 20 up next tracks for a deeper Automix session
-        const upNext = await ytmusicClient.getUpNexts(videoId);
+    // Use unified API for recommendations
+    try {
+      const upNext = await musicAPI.getUpNexts(currentTrack);
 
         // Helper to normalize strings and strip out parenthetical/dash artifacts for strict matching
         const sanitizeTitle = (str: any) => {
@@ -746,7 +723,6 @@ async function loadRecommendations(
           return true;
         }).slice(0, 20);
       } catch { /* continue */ }
-    }
 
     // 2. Fallback: musicAPI.getTrackRecommendations (Deezer → Spotify chain)
     if (newTracks.length < 3) {
