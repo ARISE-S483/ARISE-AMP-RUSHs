@@ -6,24 +6,37 @@ interface TrackSourceBadgeProps {
 }
 
 export function TrackSourceBadge({ track }: TrackSourceBadgeProps) {
-  if (!track?.source) return null;
+  if (!track) return null;
   
-  const sourceStr = track.source.toLowerCase();
+  const audioQuality = (track.audioQuality || '').toUpperCase();
+  const sourceStr = (track.source || '').toLowerCase();
+  
   let label = '';
   let colorClass = '';
 
-  if (sourceStr === 'youtube' || sourceStr === 'piped') {
+  if (audioQuality.includes('ATMOS') || audioQuality.includes('AC4') || audioQuality.includes('EAC3')) {
+    label = 'ATMOS';
+    colorClass = 'bg-purple-500/20 text-purple-400 border-purple-500/40';
+  } else if (audioQuality === 'HI_RES_LOSSLESS' || audioQuality === 'MAX') {
+    label = 'HI-RES';
+    colorClass = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+  } else if (audioQuality === 'LOSSLESS' || sourceStr === 'tidal') {
+    label = 'FLAC';
+    colorClass = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
+  } else if (audioQuality === 'HIGH' || audioQuality === 'MP3_320') {
+    label = '320K';
+    colorClass = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+  } else if (sourceStr === 'youtube' || sourceStr === 'piped') {
     label = 'OPUS';
-    colorClass = 'bg-red-500/20 text-red-500 border-red-500/30';
-  } else if (sourceStr === 'tidal' || sourceStr === 'monocrate') {
-    label = 'HD/LOSSLESS/HIFI';
-    colorClass = 'bg-cyan-500/20 text-cyan-500 border-cyan-500/30';
+    colorClass = 'bg-red-500/20 text-red-400 border-red-500/30';
   } else if (sourceStr === 'jiosaavn') {
-    label = 'JioSaavn';
-    colorClass = 'bg-green-500/20 text-green-500 border-green-500/30';
-  } else {
+    label = '320K';
+    colorClass = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+  } else if (sourceStr) {
     label = sourceStr;
     colorClass = 'bg-white/10 text-white/70 border-white/20';
+  } else {
+    return null;
   }
 
   return (

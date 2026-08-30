@@ -171,10 +171,33 @@ function loadSettings(): typeof defaultSettings {
   return { ...defaultSettings };
 }
 
+const MONO_STORAGE_MAP: Record<string, string> = {
+  audioQuality: 'playback-quality',
+  downloadQuality: 'download-quality',
+  preferDolbyAtmos: 'prefer-dolby-atmos',
+  nativeOsAtmos: 'native-os-atmos',
+  showQualityBadges: 'show-quality-badges',
+  albumReleaseYear: 'show-track-date',
+  gaplessPlayback: 'gapless-playback',
+  silenceRemoval: 'remove-silence',
+  crossfade: 'crossfade',
+  crossfadeDuration: 'crossfade-duration',
+  replayGainMode: 'replay-gain-mode',
+  replayGainPreamp: 'replay-gain-preamp',
+};
+
 function saveSettings(state: Partial<typeof defaultSettings>) {
   try {
     const current = loadSettings();
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...current, ...state }));
+    
+    // Sync with Monochrome's individual localStorage keys
+    for (const [key, val] of Object.entries(state)) {
+      const monoKey = MONO_STORAGE_MAP[key];
+      if (monoKey) {
+        localStorage.setItem(monoKey, String(val));
+      }
+    }
   } catch { /* */ }
 }
 
@@ -191,6 +214,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   resetSettings: () => {
     set(defaultSettings);
     localStorage.removeItem(STORAGE_KEY);
+    for (const monoKey of Object.values(MONO_STORAGE_MAP)) {
+      localStorage.removeItem(monoKey);
+    }
   },
 
   initCustomBackground: async () => {

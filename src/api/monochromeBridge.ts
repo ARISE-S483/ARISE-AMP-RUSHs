@@ -246,17 +246,41 @@ export async function monoGetPlaylist(id: string): Promise<Playlist> {
 // ─── Streaming ───
 export async function monoGetStreamUrl(id: string | number, quality: string = 'LOSSLESS'): Promise<string | null> {
   const api = await ensureInitialized();
+  const targetQuality = quality === 'AUTO' || quality === 'auto' ? 'HI_RES_LOSSLESS' : quality;
+
+  // 1. Try unified stream URL lookup
   try {
-    const result = await api.getStreamUrl(id, quality);
-    // Result can be a string URL or an object with url/urls
+    const result = await api.getStreamUrl(id, targetQuality);
     if (typeof result === 'string') return result;
     if (result?.url) return result.url;
     if (result?.urls?.length) return result.urls[0];
-    return null;
   } catch (e) {
-    console.warn('[monoBridge] getStreamUrl failed:', e);
-    return null;
+    console.debug('[monoBridge] api.getStreamUrl attempt failed, trying manifest lookup:', e);
   }
+
+  // 2. Try direct Tidal track manifest lookup (standard for Tidal instances)
+  try {
+    const trackLookup = await api.tidalAPI.getTrack(id, targetQuality);
+    if (trackLookup) {
+      if (trackLookup.originalTrackUrl) return trackLookup.originalTrackUrl;
+      if (trackLookup.info?.manifest) {
+        const manifestUrl = api.tidalAPI.extractStreamUrlFromManifest(trackLookup.info.manifest);
+        if (manifestUrl) return manifestUrl;
+      }
+      if (trackLookup.url) return trackLookup.url;
+      if (trackLookup.urls?.length) return trackLookup.urls[0];
+    }
+  } catch (e) {
+    console.debug('[monoBridge] tidalAPI.getTrack manifest attempt failed:', e);
+  }
+
+  // 3. Try video stream URL if applicable
+  try {
+    const videoStreamUrl = await api.getVideoStreamUrl(id);
+    if (videoStreamUrl) return videoStreamUrl;
+  } catch { /* ignore */ }
+
+  return null;
 }
 
 // ─── Recommendations ───
