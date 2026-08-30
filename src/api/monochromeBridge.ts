@@ -47,17 +47,8 @@ async function ensureInitialized() {
       };
       apiSettings.instancesLoaded = true;
 
-      // Initialize MusicAPI with settings that provide getInstances
-      await MusicAPI.initialize({
-        getInstances: async (type = 'api') => {
-          return apiSettings.getInstances(type);
-        },
-        refreshInstances: async () => {
-          apiSettings.instancesLoaded = false;
-          apiSettings._loadPromise = null;
-          await apiSettings.loadInstancesFromGitHub();
-        },
-      });
+      // Initialize exactly like monochrome's app.js: MusicAPI.initialize(apiSettings)
+      await MusicAPI.initialize(apiSettings);
     }
     isInitialized = true;
   }

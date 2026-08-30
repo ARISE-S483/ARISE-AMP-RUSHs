@@ -1,7 +1,7 @@
 // Player store - manages audio playback, queue, shuffle, repeat, radio, preload, sleep timer
 import { create } from 'zustand';
 import { equalizer } from '../api/equalizer';
-import { hifiAPI } from '@/api/piped';
+// hifiAPI no longer used directly — streaming goes through musicAPI → monochrome bridge
 import { musicAPI } from '@/api/musicAPI';
 import { ytmusicClient } from '@/api/ytmusicClient';
 import { pipedClient } from '@/api/pipedClient';
@@ -323,19 +323,20 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         streamUrl = await musicAPI.getStreamUrl(track, audioQuality);
       }
 
-      // Quality fallback chain for TIDAL sources
+      // Quality fallback chain for monochrome sources
       if (!streamUrl && (track.source === 'tidal' || !track.source)) {
         const fallbackChain: Record<string, string[]> = {
           'HI_RES_LOSSLESS': ['LOSSLESS', 'HIGH', 'LOW'],
           'LOSSLESS': ['HIGH', 'LOW'],
           'HIGH': ['LOW'],
           'LOW': [],
+          'AUTO': ['HIGH', 'LOSSLESS', 'LOW'],
           'DEFAULT': ['HIGH', 'LOW'],
         };
         const fallbacks = fallbackChain[audioQuality] || ['HIGH', 'LOW'];
         for (const fallback of fallbacks) {
           console.warn(`Quality ${audioQuality} failed, trying ${fallback}`);
-          streamUrl = await hifiAPI.getStreamUrl(track.id, fallback);
+          streamUrl = await musicAPI.getStreamUrl({ ...track, streamUrl: undefined }, fallback);
           if (streamUrl) break;
         }
       }
