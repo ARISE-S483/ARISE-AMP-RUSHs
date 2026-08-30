@@ -4,7 +4,116 @@
 
 import { MusicAPI } from '../monochrome-legacy/js/music-api.js';
 import { apiSettings } from '../monochrome-legacy/js/storage.js';
+import { SubsonicClient } from './subsonicClient';
 import type { SearchResults, Track, Album, Artist, Playlist, Lyrics } from './types';
+
+// Helper to get subsonic instances from localStorage
+function getSubsonicInstances(): any[] {
+  try {
+    const stored = localStorage.getItem('melodies_instances');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed.filter((i: any) => i.type === 'subsonic' && i.enabled);
+    }
+  } catch { }
+  return [];
+}
+
+let activeSubsonicClient: SubsonicClient | null = null;
+function getSubsonicClient(): SubsonicClient | null {
+  if (activeSubsonicClient) return activeSubsonicClient;
+  const instances = getSubsonicInstances();
+  if (instances.length > 0) {
+    const sub = instances[0];
+    activeSubsonicClient = new SubsonicClient({
+      url: sub.url,
+      username: sub.username || '',
+      password: sub.password || ''
+    });
+    return activeSubsonicClient;
+  }
+  return null;
+}
+
+// ─── Subsonic Adapters ───
+function adaptSubsonicTrack(t: any, client: SubsonicClient): Track {
+  if (!t) return null as any;
+  const coverUrl = client.getCoverUrl(t.coverArt || t.id);
+  return {
+    id: t.id,
+    title: t.title || 'Unknown Track',
+    artist: { id: t.artistId || 0, name: t.artist || 'Unknown Artist' },
+    artists: [{ id: t.artistId || 0, name: t.artist || 'Unknown Artist' }],
+    album: t.album ? {
+      id: t.albumId || 0,
+      title: t.album,
+      cover: coverUrl,
+      releaseDate: t.year ? t.year.toString() : '',
+    } : undefined,
+    duration: t.duration || 0,
+    audioQuality: t.suffix === 'flac' ? 'LOSSLESS' : 'HIGH',
+    trackNumber: t.track || 0,
+    popularity: 0,
+    type: 'track',
+    explicit: false,
+    thumbnail: coverUrl,
+    thumbnailLarge: coverUrl,
+    source: 'subsonic',
+    streamUrl: client.getStreamUrl(t.id)
+  };
+}
+
+function adaptSubsonicAlbum(a: any, client: SubsonicClient): Album {
+  if (!a) return null as any;
+  const coverUrl = client.getCoverUrl(a.coverArt || a.id);
+  return {
+    id: a.id,
+    title: a.title || 'Unknown Album',
+    artist: { id: a.artistId || 0, name: a.artist || 'Unknown Artist' },
+    artists: [{ id: a.artistId || 0, name: a.artist || 'Unknown Artist' }],
+    cover: coverUrl,
+    releaseDate: a.year ? a.year.toString() : '',
+    numberOfTracks: a.songCount || 0,
+    duration: a.duration || 0,
+    type: 'ALBUM',
+    explicit: false,
+    thumbnail: coverUrl,
+    thumbnailLarge: coverUrl,
+    tracks: a.song ? a.song.map((t: any) => adaptSubsonicTrack(t, client)) : []
+  };
+}
+
+function adaptSubsonicArtist(a: any, client: SubsonicClient): Artist {
+  if (!a) return null as any;
+  const coverUrl = client.getCoverUrl(a.coverArt || a.id);
+  return {
+    id: a.id,
+    name: a.name || 'Unknown Artist',
+    picture: coverUrl,
+    thumbnail: coverUrl,
+    thumbnailLarge: coverUrl,
+    description: '',
+    albums: a.album ? a.album.map((al: any) => adaptSubsonicAlbum(al, client)) : [],
+    tracks: [],
+    videos: []
+  };
+}
+
+function adaptSubsonicPlaylist(p: any, client: SubsonicClient): Playlist {
+  if (!p) return null as any;
+  const coverUrl = client.getCoverUrl(p.coverArt || p.id);
+  return {
+    id: p.id,
+    title: p.name || 'Unknown Playlist',
+    thumbnail: coverUrl,
+    trackCount: p.songCount || 0,
+    tracks: p.entry ? p.entry.map((t: any) => adaptSubsonicTrack(t, client)) : [],
+    description: p.comment || '',
+    creator: p.owner || '',
+    numberOfTracks: p.songCount || 0,
+    image: coverUrl
+  };
+}
 
 const MONOCHROME_API_INSTANCES = [
   "https://eu-central.monochrome.tf",
@@ -180,6 +289,22 @@ function adaptPlaylist(p: any, api: any): Playlist {
 
 // ─── Search ───
 export async function monoSearch(query: string): Promise<SearchResults> {
+  const subClient = getSubsonicClient();
+  if (subClient) {
+    try {
+      const res = await subClient.search(query);
+      return {
+        tracks: (res.song || []).map((t: any) => adaptSubsonicTrack(t, subClient)),
+        albums: (res.album || []).map((a: any) => adaptSubsonicAlbum(a, subClient)),
+        artists: (res.artist || []).map((a: any) => adaptSubsonicArtist(a, subClient)),
+        playlists: [],
+        videos: []
+      };
+    } catch (e) {
+      console.warn("Subsonic search failed, falling back", e);
+    }
+  }
+
   const api = await ensureInitialized();
   const res = await api.search(query);
 
@@ -193,6 +318,13 @@ export async function monoSearch(query: string): Promise<SearchResults> {
 }
 
 export async function monoSearchTracks(query: string): Promise<Track[]> {
+  const subClient = getSubsonicClient();
+  if (subClient) {
+    try {
+      const res = await subClient.search(query);
+      return (res.song || []).map((t: any) => adaptSubsonicTrack(t, subClient));
+    } catch {}
+  }
   const api = await ensureInitialized();
   const res = await api.searchTracks(query);
   const items = res?.items || res || [];
@@ -200,6 +332,13 @@ export async function monoSearchTracks(query: string): Promise<Track[]> {
 }
 
 export async function monoSearchArtists(query: string): Promise<Artist[]> {
+  const subClient = getSubsonicClient();
+  if (subClient) {
+    try {
+      const res = await subClient.search(query);
+      return (res.artist || []).map((a: any) => adaptSubsonicArtist(a, subClient));
+    } catch {}
+  }
   const api = await ensureInitialized();
   const res = await api.searchArtists(query);
   const items = res?.items || res || [];
@@ -207,6 +346,13 @@ export async function monoSearchArtists(query: string): Promise<Artist[]> {
 }
 
 export async function monoSearchAlbums(query: string): Promise<Album[]> {
+  const subClient = getSubsonicClient();
+  if (subClient) {
+    try {
+      const res = await subClient.search(query);
+      return (res.album || []).map((a: any) => adaptSubsonicAlbum(a, subClient));
+    } catch {}
+  }
   const api = await ensureInitialized();
   const res = await api.searchAlbums(query);
   const items = res?.items || res || [];
@@ -222,24 +368,52 @@ export async function monoSearchPlaylists(query: string): Promise<Playlist[]> {
 
 // ─── Get individual items ───
 export async function monoGetTrack(id: string | number): Promise<Track> {
+  const subClient = getSubsonicClient();
+  if (subClient) {
+    try {
+      const t = await subClient.getTrack(id.toString());
+      return adaptSubsonicTrack(t, subClient);
+    } catch {}
+  }
   const api = await ensureInitialized();
   const t = await api.getTrack(id);
   return adaptTrack(t, api);
 }
 
 export async function monoGetAlbum(id: string | number): Promise<Album> {
+  const subClient = getSubsonicClient();
+  if (subClient) {
+    try {
+      const a = await subClient.getAlbum(id.toString());
+      return adaptSubsonicAlbum(a, subClient);
+    } catch {}
+  }
   const api = await ensureInitialized();
   const a = await api.getAlbum(id);
   return adaptAlbum(a, api);
 }
 
 export async function monoGetArtist(id: string | number): Promise<Artist> {
+  const subClient = getSubsonicClient();
+  if (subClient) {
+    try {
+      const a = await subClient.getArtist(id.toString());
+      return adaptSubsonicArtist(a, subClient);
+    } catch {}
+  }
   const api = await ensureInitialized();
   const a = await api.getArtist(id);
   return adaptArtist(a, api);
 }
 
 export async function monoGetPlaylist(id: string): Promise<Playlist> {
+  const subClient = getSubsonicClient();
+  if (subClient) {
+    try {
+      const p = await subClient.getPlaylist(id);
+      return adaptSubsonicPlaylist(p, subClient);
+    } catch {}
+  }
   const api = await ensureInitialized();
   const p = await api.getPlaylist(id);
   return adaptPlaylist(p, api);
@@ -247,6 +421,11 @@ export async function monoGetPlaylist(id: string): Promise<Playlist> {
 
 // ─── Streaming ───
 export async function monoGetStreamUrl(id: string | number, quality: string = 'LOSSLESS'): Promise<string | null> {
+  const subClient = getSubsonicClient();
+  if (subClient) {
+    return subClient.getStreamUrl(id.toString());
+  }
+
   const api = await ensureInitialized();
   const targetQuality = quality === 'AUTO' || quality === 'auto' ? 'HI_RES_LOSSLESS' : quality;
 

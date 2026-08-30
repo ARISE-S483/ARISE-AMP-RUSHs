@@ -7,7 +7,7 @@ import {
 
 // ========== Types & Storage ==========
 
-type InstanceType = 'api' | 'streaming' | 'jiosaavn';
+type InstanceType = 'api' | 'streaming' | 'jiosaavn' | 'subsonic';
 
 interface InstanceEntry {
   url: string;
@@ -17,6 +17,8 @@ interface InstanceEntry {
   status?: 'online' | 'offline' | 'checking';
   version?: string;
   lastChecked?: number;
+  username?: string;
+  password?: string;
 }
 
 const STORAGE_KEY = 'melodies_instances';
@@ -123,6 +125,7 @@ const typeTabs: { id: InstanceType; label: string; icon: React.ComponentType<any
   { id: 'api', label: 'API (TIDAL)', icon: Server },
   { id: 'streaming', label: 'Streaming & Video', icon: Zap },
   { id: 'jiosaavn', label: 'JioSaavn', icon: Music2 },
+  { id: 'subsonic', label: 'Subsonic / HiFi', icon: Server },
 ];
 
 function StatusBadge({ status, latency }: { status?: string; latency?: number }) {
@@ -225,6 +228,8 @@ export default function InstancesPage() {
   const [instances, setInstances] = useState<InstanceEntry[]>(loadInstances);
   const [activeType, setActiveType] = useState<InstanceType>('api');
   const [addingUrl, setAddingUrl] = useState('');
+  const [addingUsername, setAddingUsername] = useState('');
+  const [addingPassword, setAddingPassword] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [checking, setChecking] = useState(false);
 
@@ -256,12 +261,22 @@ export default function InstancesPage() {
 
     if (instances.some(i => i.url === url && i.type === activeType)) {
       setAddingUrl('');
+      setAddingUsername('');
+      setAddingPassword('');
       setIsAdding(false);
       return;
     }
 
-    persist([...instances, { url, type: activeType, enabled: true }]);
+    persist([...instances, { 
+      url, 
+      type: activeType, 
+      enabled: true, 
+      username: activeType === 'subsonic' ? addingUsername : undefined,
+      password: activeType === 'subsonic' ? addingPassword : undefined 
+    }]);
     setAddingUrl('');
+    setAddingUsername('');
+    setAddingPassword('');
     setIsAdding(false);
   };
 
@@ -288,6 +303,9 @@ export default function InstancesPage() {
             testPath = '/search/?s=test';
           } else if (activeType === 'jiosaavn') {
             testPath = '/api/search/songs?query=test&limit=1';
+          } else if (activeType === 'subsonic') {
+            testPath = '/rest/ping.view?v=1.16.1&c=arise-amp-rush2&f=json';
+            // Ping doesn't strictly need auth on some servers, but let's just do a basic ping
           } else if (activeType === 'streaming') {
             // Smart path detection for streaming URLs
             if (isRapidApiUrl) {
@@ -479,28 +497,48 @@ export default function InstancesPage() {
             exit={{ opacity: 0, height: 0 }}
             className="mb-4 overflow-hidden"
           >
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={addingUrl}
-                onChange={(e) => setAddingUrl(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setIsAdding(false); }}
-                placeholder="https://instance.example.com"
-                className="flex-1 bg-secondary text-foreground text-sm rounded-lg px-3 py-2 outline-none border border-border focus:ring-1 focus:ring-foreground/20"
-                autoFocus
-              />
-              <button
-                onClick={handleAdd}
-                className="px-4 py-2 rounded-lg text-sm bg-foreground text-background font-medium hover:opacity-90 transition-opacity"
-              >
-                Add
-              </button>
-              <button
-                onClick={() => { setIsAdding(false); setAddingUrl(''); }}
-                className="px-3 py-2 rounded-lg text-sm bg-secondary/60 hover:bg-accent transition-colors"
-              >
-                Cancel
-              </button>
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={addingUrl}
+                  onChange={(e) => setAddingUrl(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setIsAdding(false); }}
+                  placeholder="https://instance.example.com"
+                  className="flex-1 bg-secondary text-foreground text-sm rounded-lg px-3 py-2 outline-none border border-border focus:ring-1 focus:ring-foreground/20"
+                  autoFocus
+                />
+                <button
+                  onClick={handleAdd}
+                  className="px-4 py-2 rounded-lg text-sm bg-foreground text-background font-medium hover:opacity-90 transition-opacity"
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => { setIsAdding(false); setAddingUrl(''); }}
+                  className="px-3 py-2 rounded-lg text-sm bg-secondary/60 hover:bg-accent transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+              {activeType === 'subsonic' && (
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="text"
+                    value={addingUsername}
+                    onChange={(e) => setAddingUsername(e.target.value)}
+                    placeholder="Username"
+                    className="flex-1 bg-secondary text-foreground text-sm rounded-lg px-3 py-2 outline-none border border-border focus:ring-1 focus:ring-foreground/20"
+                  />
+                  <input
+                    type="password"
+                    value={addingPassword}
+                    onChange={(e) => setAddingPassword(e.target.value)}
+                    placeholder="Password"
+                    className="flex-1 bg-secondary text-foreground text-sm rounded-lg px-3 py-2 outline-none border border-border focus:ring-1 focus:ring-foreground/20"
+                  />
+                </div>
+              )}
             </div>
           </motion.div>
         )}
