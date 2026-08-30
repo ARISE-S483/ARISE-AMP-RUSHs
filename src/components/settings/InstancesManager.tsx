@@ -22,7 +22,7 @@ interface InstanceEntry {
   lastChecked?: number;
 }
 
-const STORAGE_KEY = 'melodies_instances';
+const STORAGE_KEY = 'melodies_instances_v2';
 
 const DEFAULT_INSTANCES: InstanceEntry[] = [];
 
