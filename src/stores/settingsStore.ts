@@ -17,9 +17,20 @@ interface SettingsState {
   silenceRemoval: boolean;
   crossfade: boolean;
   crossfadeDuration: number;
+  replayGainMode: string;
+  replayGainPreamp: number;
   monoAudio: boolean;
+  exponentialVolume: boolean;
+  playbackSpeed: number;
+  preservePitch: boolean;
   binauralDsp: boolean;
   autoEnableSpatial: boolean;
+  binauralCrossfeed: boolean;
+  binauralCrossfeedLevel: string;
+  binauralHrtfPreset: string;
+  binauralWidening: boolean;
+  binauralWidth: number;
+  equalizerEnabled: boolean;
 
   // Downloads
   downloadQuality: string;
@@ -95,9 +106,20 @@ const defaultSettings = {
   silenceRemoval: false,
   crossfade: false,
   crossfadeDuration: 1,
+  replayGainMode: 'off',
+  replayGainPreamp: 0,
   monoAudio: false,
+  exponentialVolume: true,
+  playbackSpeed: 1.0,
+  preservePitch: true,
   binauralDsp: false,
   autoEnableSpatial: false,
+  binauralCrossfeed: true,
+  binauralCrossfeedLevel: 'medium',
+  binauralHrtfPreset: 'studio',
+  binauralWidening: true,
+  binauralWidth: 1.0,
+  equalizerEnabled: false,
   downloadQuality: 'LOSSLESS',
   losslessContainer: 'nochange',
   bulkDownloadMethod: 'zip',

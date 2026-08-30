@@ -278,10 +278,11 @@ export default function SettingsPage() {
               {activeTab === 'audio' && (
                 <div>
                   <h2 className="font-display font-semibold text-base mb-3">Audio Settings</h2>
-                  <SettingRow label="Streaming Quality" description="Select preferred audio quality">
+                  <SettingRow label="Streaming Quality" description="Default playback quality for streams">
                     <Select<string>
                       value={settings.audioQuality}
                       options={[
+                        { value: 'auto', label: 'Auto (Adaptive)' },
                         { value: 'DOLBY_ATMOS_EAC3_HIGH', label: 'Dolby Atmos — E-AC-3 High' },
                         { value: 'DOLBY_ATMOS_EAC3_LOW', label: 'Dolby Atmos — E-AC-3 Low' },
                         { value: 'DOLBY_ATMOS_AC4_HIGH', label: 'Dolby Atmos — AC-4 High' },
@@ -315,31 +316,100 @@ export default function SettingsPage() {
                   <SettingRow label="Crossfade" description="Overlap tracks with an equal-power fade">
                     <Toggle checked={settings.crossfade} onChange={(v) => setSetting('crossfade', v)} />
                   </SettingRow>
-                  <SettingRow label="Crossfade Duration" description="Choose how long both tracks overlap">
+                  {settings.crossfade && (
+                    <SettingRow label="Crossfade Duration" description="Choose how long both tracks overlap">
+                      <Select<string>
+                        value={String(settings.crossfadeDuration)}
+                        options={[
+                          { value: '1', label: '1 second' },
+                          { value: '2', label: '2 seconds' },
+                          { value: '3', label: '3 seconds' },
+                          { value: '4', label: '4 seconds' },
+                          { value: '5', label: '5 seconds' },
+                          { value: '6', label: '6 seconds' },
+                          { value: '8', label: '8 seconds' },
+                          { value: '10', label: '10 seconds' },
+                          { value: '12', label: '12 seconds' },
+                        ]}
+                        onChange={(v) => setSetting('crossfadeDuration', Number(v))}
+                      />
+                    </SettingRow>
+                  )}
+                  <SettingRow label="Replay Gain Mode" description="Normalize volume across tracks automatically">
                     <Select<string>
-                      value={String(settings.crossfadeDuration)}
+                      value={settings.replayGainMode}
                       options={[
-                        { value: '1', label: '1 second' },
-                        { value: '2', label: '2 seconds' },
-                        { value: '3', label: '3 seconds' },
-                        { value: '4', label: '4 seconds' },
-                        { value: '5', label: '5 seconds' },
-                        { value: '6', label: '6 seconds' },
-                        { value: '8', label: '8 seconds' },
-                        { value: '10', label: '10 seconds' },
-                        { value: '12', label: '12 seconds' },
+                        { value: 'off', label: 'Off' },
+                        { value: 'track', label: 'Track' },
+                        { value: 'album', label: 'Album' },
                       ]}
-                      onChange={(v) => setSetting('crossfadeDuration', Number(v))}
+                      onChange={(v) => setSetting('replayGainMode', v)}
                     />
                   </SettingRow>
+                  {settings.replayGainMode !== 'off' && (
+                    <SettingRow label="Replay Gain Pre-amp" description="Adjust base volume for Replay Gain">
+                      <NumberInput value={settings.replayGainPreamp} onChange={(v) => setSetting('replayGainPreamp', v)} min={-10} max={10} step={0.1} suffix="dB" />
+                    </SettingRow>
+                  )}
                   <SettingRow label="Mono Audio" description="Combine left and right channels into mono">
                     <Toggle checked={settings.monoAudio} onChange={(v) => setSetting('monoAudio', v)} />
+                  </SettingRow>
+                  <SettingRow label="Exponential Volume" description="More natural volume control curve">
+                    <Toggle checked={settings.exponentialVolume} onChange={(v) => setSetting('exponentialVolume', v)} />
+                  </SettingRow>
+                  <SettingRow label="Playback Speed" description="Adjust playback speed">
+                    <NumberInput value={settings.playbackSpeed} onChange={(v) => setSetting('playbackSpeed', v)} min={0.5} max={2.0} step={0.05} suffix="x" />
+                  </SettingRow>
+                  <SettingRow label="Preserve Pitch" description="Keep the original pitch when changing playback speed">
+                    <Toggle checked={settings.preservePitch} onChange={(v) => setSetting('preservePitch', v)} />
                   </SettingRow>
                   <SettingRow label="Binaural / Spatial DSP" description="Multichannel HRTF rendering for Atmos & 3D Audio, crossfeed for stereo">
                     <Toggle checked={settings.binauralDsp} onChange={(v) => setSetting('binauralDsp', v)} />
                   </SettingRow>
-                  <SettingRow label="Auto-enable for Spatial Audio" description="Automatically activate when Atmos or 3D content is detected">
-                    <Toggle checked={settings.autoEnableSpatial} onChange={(v) => setSetting('autoEnableSpatial', v)} />
+                  {settings.binauralDsp && (
+                    <div className="pl-4 border-l border-border/50 ml-2 mt-2 mb-2 space-y-1">
+                      <SettingRow label="Auto-enable for Spatial Audio" description="Automatically activate when Atmos or 3D content is detected">
+                        <Toggle checked={settings.autoEnableSpatial} onChange={(v) => setSetting('autoEnableSpatial', v)} />
+                      </SettingRow>
+                      <SettingRow label="Crossfeed" description="Simulate speaker presentation on headphones">
+                        <Toggle checked={settings.binauralCrossfeed} onChange={(v) => setSetting('binauralCrossfeed', v)} />
+                      </SettingRow>
+                      {settings.binauralCrossfeed && (
+                        <SettingRow label="Crossfeed Level" description="Amount of crossfeed applied">
+                          <Select<string>
+                            value={settings.binauralCrossfeedLevel}
+                            options={[
+                              { value: 'low', label: 'Low' },
+                              { value: 'medium', label: 'Medium' },
+                              { value: 'high', label: 'High' },
+                            ]}
+                            onChange={(v) => setSetting('binauralCrossfeedLevel', v)}
+                          />
+                        </SettingRow>
+                      )}
+                      <SettingRow label="HRTF Preset" description="Virtual speaker angle for multichannel rendering">
+                        <Select<string>
+                          value={settings.binauralHrtfPreset}
+                          options={[
+                            { value: 'intimate', label: 'Intimate (±22°)' },
+                            { value: 'studio', label: 'Studio (±30°)' },
+                            { value: 'wide', label: 'Wide (±45°)' },
+                          ]}
+                          onChange={(v) => setSetting('binauralHrtfPreset', v)}
+                        />
+                      </SettingRow>
+                      <SettingRow label="Stereo Width" description="Adjust spatial width">
+                        <Toggle checked={settings.binauralWidening} onChange={(v) => setSetting('binauralWidening', v)} />
+                      </SettingRow>
+                      {settings.binauralWidening && (
+                        <SettingRow label="Width Amount" description="0 = mono, 1 = neutral, 2 = wide">
+                          <NumberInput value={settings.binauralWidth} onChange={(v) => setSetting('binauralWidth', v)} min={0} max={2} step={0.05} suffix="" />
+                        </SettingRow>
+                      )}
+                    </div>
+                  )}
+                  <SettingRow label="EQ Studio" description="Multi-mode equalizer with AutoEQ, M/S processing & room correction">
+                    <Toggle checked={settings.equalizerEnabled} onChange={(v) => setSetting('equalizerEnabled', v)} />
                   </SettingRow>
                 </div>
               )}
