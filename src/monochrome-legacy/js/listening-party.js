@@ -5,7 +5,7 @@ import { navigate } from './router.js';
 import { getTrackArtists, escapeHtml } from './utils.js';
 import { audioContextManager } from './audio-context.js';
 import { showNotification } from './downloads.js';
-import { SVG_PAUSE } from './icons.js';
+import { SVG_PAUSE } from './icons.ts';
 import { PartySocketClient } from './party-socket.js';
 
 export const LISTENING_PARTIES_DISABLED_MESSAGE =

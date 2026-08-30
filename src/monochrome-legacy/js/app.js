@@ -3,7 +3,7 @@ import './sentry.js';
 import discordSvg from '../images/discord.svg?svg&size=22';
 import googleSvg from '../images/google.svg?svg&size=22';
 import githubSvg from '../images/github.svg?svg&size=22';
-import { isIos, isSafari } from './platform-detection.js';
+import { isIos, isSafari } from './platform-detection.ts';
 import { hapticLight } from './haptics.js';
 import { MusicAPI } from './music-api.js';
 import {
@@ -47,7 +47,7 @@ import {
     importToLibrary,
 } from './playlist-importer.js';
 import { generateFullCSV, generateFullJSON } from './playlist-generator.js';
-import { modernSettings } from './ModernSettings.js';
+import { modernSettings } from './ModernSettings.ts';
 import {
     SVG_OFFLINE,
     SVG_RIGHT_ARROW,
@@ -56,8 +56,8 @@ import {
     SVG_PLAY,
     SVG_CLOSE,
     SVG_RESET,
-} from './icons.js';
-import { HiFiClient } from './HiFi.js';
+} from './icons.ts';
+import { HiFiClient } from './HiFi.ts';
 
 const AMAZON_DECRYPTER_SW_VERSION = '2026-08-09-atmos-v11';
 

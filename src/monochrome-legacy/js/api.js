@@ -26,11 +26,11 @@ import { getProxyUrl, wrapTidalUrl } from './proxy-utils.js';
 import { loadFfmpeg, FfmpegError, ffmpeg } from './ffmpeg.js';
 import { triggerDownload, applyAudioPostProcessing } from './download-utils.ts';
 import { isCustomFormat } from './ffmpegFormats.ts';
-import { DownloadProgress } from './progressEvents.js';
+import { DownloadProgress } from './progressEvents.ts';
 import { resolveDownloadTotalBytes } from './downloadProgressUtils.js';
-import { readableStreamIterator } from './readableStreamIterator.js';
+import { readableStreamIterator } from './readableStreamIterator.ts';
 import { HiFiClient, TidalResponse } from './HiFi.ts';
-import { canUseNativeAmazonCenc, getAmazonDecrypterCodec, canBrowserStreamAtmosQuality } from './platform-detection.js';
+import { canUseNativeAmazonCenc, getAmazonDecrypterCodec, canBrowserStreamAtmosQuality } from './platform-detection.ts';
 import {
     TrackAlbum,
     EnrichedAlbum,
@@ -41,7 +41,7 @@ import {
     Album,
     PreparedVideo,
     PreparedTrack,
-} from './container-classes.js';
+} from './container-classes.ts';
 
 export const DASH_MANIFEST_UNAVAILABLE_CODE = 'DASH_MANIFEST_UNAVAILABLE';
 export const UNSUPPORTED_PLAYBACK_CODEC_CODE = 'UNSUPPORTED_PLAYBACK_CODEC';

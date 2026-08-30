@@ -79,7 +79,7 @@ async function convertInputToTaglib<R = TagLibReadTypes>(
     return audioData as R;
 }
 
-const workerModule = import('./taglib.worker.js');
+const workerModule = import('./taglib.worker.ts');
 
 export async function addMetadataWithTagLib(
     audioData: TagLibWriteTypes,

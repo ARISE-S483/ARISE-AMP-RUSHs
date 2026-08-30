@@ -1,6 +1,6 @@
 //js/utils.js
-import { modernSettings } from './ModernSettings.js';
-import { SVG_ATMOS } from './icons.js';
+import { modernSettings } from './ModernSettings.ts';
+import { SVG_ATMOS } from './icons.ts';
 import { qualityBadgeSettings, coverArtSizeSettings, trackDateSettings } from './storage.js';
 
 export const QUALITY = 'LOSSLESS';

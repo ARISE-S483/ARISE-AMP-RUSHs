@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { canBrowserStreamAtmosQuality, getAmazonDecrypterCodec } from './platform-detection.js';
+import { canBrowserStreamAtmosQuality, getAmazonDecrypterCodec } from './platform-detection.ts';
 
 describe('getAmazonDecrypterCodec', () => {
     test('uses seekable segmented HLS for lossless Firefox playback', () => {

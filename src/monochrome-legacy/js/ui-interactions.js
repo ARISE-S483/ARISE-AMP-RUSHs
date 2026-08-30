@@ -24,9 +24,9 @@ import {
     SVG_EQUAL,
     SVG_TRIANGLE_ALERT,
     SVG_ATMOS,
-} from './icons.js';
+} from './icons.ts';
 import { hapticSuccess } from './haptics.js';
-import { getLocalFilesSupportInfo } from './platform-detection.js';
+import { getLocalFilesSupportInfo } from './platform-detection.ts';
 
 export function updateLocalFilesSupportUI() {
     const selectBtn = document.getElementById('select-local-folder-btn');

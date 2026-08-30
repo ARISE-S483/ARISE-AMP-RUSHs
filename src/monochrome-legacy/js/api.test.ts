@@ -2,7 +2,7 @@ import { expect, test, suite, vi } from 'vitest';
 import { apiSettings, preferDolbyAtmosSettings, losslessContainerSettings } from './storage.js';
 import { MusicAPI } from './music-api.js';
 import { LyricsManager } from './lyrics.js';
-import { HiFiClient } from './HiFi.js';
+import { HiFiClient } from './HiFi.ts';
 import { FileRef } from '!/@dantheman827/taglib-ts/src/fileRef.js';
 import { Mp4File } from '!/@dantheman827/taglib-ts/src/mp4/mp4File.js';
 import { MpegFile } from '!/@dantheman827/taglib-ts/src/mpeg/mpegFile.js';
@@ -12,7 +12,7 @@ import { ByteVector, StringType } from '!/@dantheman827/taglib-ts/src/byteVector
 import { Mp4Codec } from '!/@dantheman827/taglib-ts/src/mp4/mp4Properties.js';
 import { OggFile } from '!/@dantheman827/taglib-ts/src/ogg/oggFile.js';
 import { ffmpeg } from './ffmpeg.js';
-import type { Track } from './container-classes.js';
+import type { Track } from './container-classes.ts';
 
 vi.mock(import('./storage.js'), async (importOriginal) => {
     const mod = await importOriginal();
@@ -41,7 +41,7 @@ vi.mock(import('./ffmpeg.js'), async (importOriginal) => {
     };
 });
 
-vi.mock(import('./doTimed.js'), async (importOriginal) => {
+vi.mock(import('./doTimed.ts'), async (importOriginal) => {
     const mod = await importOriginal();
 
     return {
@@ -67,7 +67,7 @@ vi.mock(import('./doTimed.js'), async (importOriginal) => {
                     });
             }) as R;
         },
-    } satisfies typeof import('./doTimed.js');
+    } satisfies typeof import('./doTimed.ts');
 });
 
 vi.spyOn(console, 'error').mockImplementation(() => {});

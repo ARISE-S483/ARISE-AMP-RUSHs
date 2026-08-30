@@ -2,7 +2,7 @@
 // Shared Audio Context Manager - handles EQ and provides context for visualizer
 // Supports 3-32 parametric EQ bands
 
-import { isIos, isSafari } from './platform-detection.js';
+import { isIos, isSafari } from './platform-detection.ts';
 import { equalizerSettings, monoAudioSettings, binauralDspSettings } from './storage.js';
 import { BinauralDSP } from './binaural-dsp.js';
 

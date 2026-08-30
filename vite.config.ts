@@ -14,6 +14,20 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
+  build: {
+    rollupOptions: {
+      external: [
+        /^\!/
+      ],
+    },
+  },
+  worker: {
+    rollupOptions: {
+      external: [
+        /^\!/
+      ],
+    },
+  },
   plugins: [
     react(),
     mode === "development" && componentTagger(),

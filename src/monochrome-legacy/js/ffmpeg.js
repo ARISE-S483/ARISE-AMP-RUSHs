@@ -1,6 +1,6 @@
 import FfmpegWorker from './ffmpeg.worker.js?worker';
-import coreJs from '!/@ffmpeg/core/dist/esm/ffmpeg-core.js?blob-url';
-import coreWasm from '!/@ffmpeg/core/dist/esm/ffmpeg-core.wasm?blob-url';
+import coreJs from '@ffmpeg/core?url';
+import coreWasm from '@ffmpeg/core/wasm?url';
 import { FfmpegProgress } from './ffmpeg.types';
 
 /**

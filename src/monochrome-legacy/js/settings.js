@@ -58,8 +58,8 @@ import { db } from './db.js';
 import { authManager } from './accounts/auth.js';
 import { syncManager } from './accounts/pocketbase.js';
 import { containerFormats, customFormats } from './ffmpegFormats.ts';
-import { BulkDownloadMethod, modernSettings } from './ModernSettings.js';
-import { canBrowserStreamAtmosQuality } from './platform-detection.js';
+import { BulkDownloadMethod, modernSettings } from './ModernSettings.ts';
+import { canBrowserStreamAtmosQuality } from './platform-detection.ts';
 
 async function getButterchurnPresets(...args) {
     const butterchurnModule = await import('./visualizers/butterchurn.js');

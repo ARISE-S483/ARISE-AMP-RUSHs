@@ -1,4 +1,4 @@
-import { FFmpeg } from '!/@ffmpeg/ffmpeg/dist/esm/classes.js';
+import { FFmpeg } from '@ffmpeg/ffmpeg';
 
 let ffmpeg = null;
 let loadingPromise = null;

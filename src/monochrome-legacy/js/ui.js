@@ -103,7 +103,7 @@ import {
     SVG_RIGHT_ARROW,
     SVG_CLOCK,
     SVG_CHECKBOX,
-} from './icons.js';
+} from './icons.ts';
 
 const AOTY_BASE = 'https://aoty.prigoana.pw';
 const AOTY_CACHE_TTL = 86_400_000; // 24 hours

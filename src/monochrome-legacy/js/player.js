@@ -25,13 +25,13 @@ import {
     crossfadeSettings,
 } from './storage.js';
 import { audioContextManager } from './audio-context.js';
-import { isIos, isSafari, isEdge, canUseNativeAmazonCenc, getAmazonDecrypterCodec } from './platform-detection.js';
+import { isIos, isSafari, isEdge, canUseNativeAmazonCenc, getAmazonDecrypterCodec } from './platform-detection.ts';
 import { db } from './db.js';
 import { getProxyUrl } from './proxy-utils.js';
 import { getReplayGainScale } from './replay-gain.js';
 import { waveformGenerator } from './waveform.js';
 
-import { SVG_CLOCK, SVG_ATMOS, SVG_TRIANGLE_ALERT, SVG_PLAY, SVG_PAUSE } from './icons.js';
+import { SVG_CLOCK, SVG_ATMOS, SVG_TRIANGLE_ALERT, SVG_PLAY, SVG_PAUSE } from './icons.ts';
 import { UIRenderer } from './ui.js';
 import { MediaSession } from '@capgo/capacitor-media-session';
 

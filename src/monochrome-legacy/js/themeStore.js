@@ -2,7 +2,7 @@ import { syncManager } from './accounts/pocketbase.js';
 import { authManager } from './accounts/auth.js';
 import { authApi } from './accounts/authApi.js';
 import { navigate } from './router.js';
-import { SVG_BIN, SVG_SQUARE_PEN } from './icons.js';
+import { SVG_BIN, SVG_SQUARE_PEN } from './icons.ts';
 
 const THEMES_PER_PAGE = 50;
 

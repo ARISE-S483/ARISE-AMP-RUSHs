@@ -1,7 +1,7 @@
 //storage.js
 
 import { SVG_RIGHT_ARROW } from './icons';
-import { isIos, isSafari } from './platform-detection.js';
+import { isIos, isSafari } from './platform-detection.ts';
 
 export const apiSettings = {
     STORAGE_KEY: 'monochrome-api-instances-v9',

@@ -9,7 +9,7 @@ import {
 import { addMetadataWithTagLib, getMetadataWithTagLib } from './taglib.ts';
 import { LyricsManager } from './lyrics.js';
 import { Mp4Stik } from './taglib.types.ts';
-import { modernSettings } from './ModernSettings.js';
+import { modernSettings } from './ModernSettings.ts';
 
 /**
  * @typedef {import('./container-classes.ts').Track} Track

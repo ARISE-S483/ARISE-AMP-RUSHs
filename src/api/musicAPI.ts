@@ -623,9 +623,7 @@ class MusicAPI {
 
   // ===== Passthrough methods (TIDAL-only features) =====
 
-  async getAlbum(id: number | string) {
-    return hifiAPI.getAlbum(id);
-  }
+
 
   async getPlaylist(id: string) {
     return hifiAPI.getPlaylist(id);

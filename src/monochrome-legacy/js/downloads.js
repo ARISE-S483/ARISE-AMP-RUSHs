@@ -14,10 +14,10 @@ import {
 import { lyricsSettings, playlistSettings } from './storage.js';
 import { generateM3U, generateM3U8, generateCUE, generateNFO, generateJSON } from './playlist-generator.js';
 import { ZipStreamWriter, ZipBlobWriter, FolderPickerWriter, SequentialFileWriter } from './bulk-download-writer.ts';
-import { FfmpegProgress } from './ffmpeg.types.js';
-import { DownloadProgress, ProgressMessage, SegmentedDownloadProgress } from './progressEvents.js';
+import { FfmpegProgress } from './ffmpeg.types.ts';
+import { DownloadProgress, ProgressMessage, SegmentedDownloadProgress } from './progressEvents.ts';
 import { db } from './db.js';
-import { BulkDownloadMethod, modernSettings } from './ModernSettings.js';
+import { BulkDownloadMethod, modernSettings } from './ModernSettings.ts';
 import { SVG_CLOSE } from './icons.ts';
 import { MusicAPI } from './music-api.js';
 import { LyricsManager } from './lyrics.js';

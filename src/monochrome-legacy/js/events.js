@@ -26,7 +26,7 @@ import { syncManager } from './accounts/pocketbase.js';
 import { waveformGenerator } from './waveform.js';
 import { audioContextManager } from './audio-context.js';
 import { hapticLongPress, hapticMedium, hapticLight } from './haptics.js';
-import { SVG_BIN, SVG_MUTE, SVG_PAUSE, SVG_PLAY, SVG_VOLUME, SVG_CHECKBOX, SVG_CHECKBOX_CHECKED } from './icons.js';
+import { SVG_BIN, SVG_MUTE, SVG_PAUSE, SVG_PLAY, SVG_VOLUME, SVG_CHECKBOX, SVG_CHECKBOX_CHECKED } from './icons.ts';
 import { partyManager } from './listening-party.js';
 import { MusicAPI } from './music-api.js';
 import { LyricsManager } from './lyrics.js';

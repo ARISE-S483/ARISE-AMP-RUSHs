@@ -8,7 +8,7 @@ import {
     SVG_PLUS,
     SVG_RESET,
     SVG_GLOBE,
-} from './icons.js';
+} from './icons.ts';
 import { sidePanelManager } from './side-panel.js';
 
 const loadAmLyrics = () => {

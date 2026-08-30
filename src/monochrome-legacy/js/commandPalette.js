@@ -43,7 +43,7 @@ import {
     SVG_DISC,
     SVG_MIC,
     SVG_RADIO,
-} from './icons.js';
+} from './icons.ts';
 import { Player } from './player.js';
 import { UIRenderer } from './ui.js';
 

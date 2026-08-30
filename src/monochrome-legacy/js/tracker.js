@@ -1,7 +1,7 @@
 //js/tracker.js
 import { escapeHtml, trackDataStore, formatTime } from './utils.js';
 import { navigate } from './router.js';
-import { SVG_MENU, SVG_PLAY, SVG_HEART } from './icons.js';
+import { SVG_MENU, SVG_PLAY, SVG_HEART } from './icons.ts';
 import { Player } from './player.js';
 
 let artistsData = [];
