@@ -1,29 +1,38 @@
 // Settings store - mirrors Monochrome's settings categories
 import { create } from 'zustand';
-export type AudioQuality = 'DEFAULT' | 'AUTO' | 'LOW' | 'HIGH' | 'LOSSLESS' | 'HI_RES_LOSSLESS';
-export type DownloadQuality = 'HIGH' | 'LOSSLESS' | 'HI_RES_LOSSLESS';
-export type LosslessContainer = 'flac' | 'alac' | 'wav';
 export type VisualizerStyle = 'bars' | 'wave' | 'circular' | 'none';
 export type LyricsSize = 'small' | 'medium' | 'large';
-export type CoverArtSize = 320 | 640 | 1280;
 export type NowPlayingStyle = 'default' | 'fullscreen' | 'minimal';
 export type BackgroundStyle = 'none' | 'blur' | 'gradient' | 'solid';
 export type BackgroundImage = 'blue-mountains' | 'cosmic-purple' | 'dark-forest' | 'neon-city' | 'valkyrie' | 'custom' | 'none';
 
 interface SettingsState {
   // Audio
-  audioQuality: AudioQuality;
-  replayGain: boolean;
+  audioQuality: string;
+  preferDolbyAtmos: boolean;
+  nativeOsAtmos: boolean;
+  showQualityBadges: boolean;
+  albumReleaseYear: boolean;
+  gaplessPlayback: boolean;
+  silenceRemoval: boolean;
+  crossfade: boolean;
+  crossfadeDuration: number;
   monoAudio: boolean;
-  exponentialVolume: boolean;
-  crossfade: number; // seconds, 0 = off
+  binauralDsp: boolean;
+  autoEnableSpatial: boolean;
 
   // Downloads
-  downloadQuality: DownloadQuality;
-  losslessContainer: LosslessContainer;
-  embedMetadata: boolean;
-  embedLyrics: boolean;
-  coverArtSize: CoverArtSize;
+  downloadQuality: string;
+  losslessContainer: string;
+  bulkDownloadMethod: string;
+  rememberLastFolder: boolean;
+  singleToFolder: boolean;
+  forceZipBlob: boolean;
+  writeArtistsSeparately: boolean;
+  downloadLyrics: boolean;
+  romajiLyrics: boolean;
+  coverArtSize: string;
+  filenameTemplate: string;
 
   // Appearance
   backgroundImage: BackgroundImage;
@@ -77,16 +86,29 @@ interface SettingsState {
 const STORAGE_KEY = 'melodies_settings';
 
 const defaultSettings = {
-  audioQuality: 'HIGH' as AudioQuality,
-  replayGain: false,
+  audioQuality: 'HIGH',
+  preferDolbyAtmos: false,
+  nativeOsAtmos: true,
+  showQualityBadges: true,
+  albumReleaseYear: true,
+  gaplessPlayback: true,
+  silenceRemoval: false,
+  crossfade: false,
+  crossfadeDuration: 1,
   monoAudio: false,
-  exponentialVolume: true,
-  crossfade: 0,
-  downloadQuality: 'LOSSLESS' as DownloadQuality,
-  losslessContainer: 'flac' as LosslessContainer,
-  embedMetadata: true,
-  embedLyrics: true,
-  coverArtSize: 1280 as CoverArtSize,
+  binauralDsp: false,
+  autoEnableSpatial: false,
+  downloadQuality: 'LOSSLESS',
+  losslessContainer: 'nochange',
+  bulkDownloadMethod: 'zip',
+  rememberLastFolder: false,
+  singleToFolder: false,
+  forceZipBlob: false,
+  writeArtistsSeparately: false,
+  downloadLyrics: false,
+  romajiLyrics: false,
+  coverArtSize: '1280x1280',
+  filenameTemplate: '',
   backgroundImage: 'valkyrie' as BackgroundImage,
   customBackgroundUrl: '',
   customBackgroundType: 'none' as 'image' | 'video' | 'none',

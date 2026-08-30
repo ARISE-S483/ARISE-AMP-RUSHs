@@ -17,8 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import InstancesManager from '@/components/settings/InstancesManager';
 import SyncManagement from '@/components/settings/SyncManagement';
 import type {
-  AudioQuality, DownloadQuality, LosslessContainer, VisualizerStyle,
-  LyricsSize, CoverArtSize, BackgroundStyle, NowPlayingStyle, BackgroundImage
+  VisualizerStyle,
+  LyricsSize, BackgroundStyle, NowPlayingStyle, BackgroundImage
 } from '@/stores/settingsStore';
 import { saveBackgroundData } from '@/lib/backgroundStore';
 
@@ -278,31 +278,68 @@ export default function SettingsPage() {
               {activeTab === 'audio' && (
                 <div>
                   <h2 className="font-display font-semibold text-base mb-3">Audio Settings</h2>
-                  <SettingRow label="Streaming Quality" description="Higher quality uses more bandwidth">
-                    <Select<AudioQuality>
+                  <SettingRow label="Streaming Quality" description="Select preferred audio quality">
+                    <Select<string>
                       value={settings.audioQuality}
                       options={[
-                        { value: 'DEFAULT', label: 'Default (Original Track Quality)' },
-                        { value: 'AUTO', label: 'Auto (Best Quality)' },
-                        { value: 'LOW', label: 'Low (96 kbps)' },
-                        { value: 'HIGH', label: 'High (320 kbps)' },
-                        { value: 'LOSSLESS', label: 'Lossless (FLAC)' },
-                        { value: 'HI_RES_LOSSLESS', label: 'Hi-Res Lossless' },
+                        { value: 'DOLBY_ATMOS_EAC3_HIGH', label: 'Dolby Atmos — E-AC-3 High' },
+                        { value: 'DOLBY_ATMOS_EAC3_LOW', label: 'Dolby Atmos — E-AC-3 Low' },
+                        { value: 'DOLBY_ATMOS_AC4_HIGH', label: 'Dolby Atmos — AC-4 High' },
+                        { value: 'DOLBY_ATMOS_AC4_LOW', label: 'Dolby Atmos — AC-4 Low' },
+                        { value: 'HI_RES_LOSSLESS', label: 'Hi-Res Lossless (24-bit)' },
+                        { value: 'LOSSLESS', label: 'Lossless (16-bit)' },
+                        { value: 'HIGH', label: 'High' },
+                        { value: 'LOW', label: 'Low' },
                       ]}
                       onChange={(v) => setSetting('audioQuality', v)}
                     />
                   </SettingRow>
-                  <SettingRow label="Replay Gain" description="Normalize volume across tracks">
-                    <Toggle checked={settings.replayGain} onChange={(v) => setSetting('replayGain', v)} />
+                  <SettingRow label="Prefer Dolby Atmos" description="Automatically request Dolby Atmos spatial audio on Tidal when available">
+                    <Toggle checked={settings.preferDolbyAtmos} onChange={(v) => setSetting('preferDolbyAtmos', v)} />
                   </SettingRow>
-                  <SettingRow label="Mono Audio" description="Mix stereo to mono for single speaker">
+                  <SettingRow label="Native OS Dolby Atmos Rendering" description="Render Atmos directly on Safari (Apple Spatial Audio) or Edge (Windows Dolby Audio) for full volume">
+                    <Toggle checked={settings.nativeOsAtmos} onChange={(v) => setSetting('nativeOsAtmos', v)} />
+                  </SettingRow>
+                  <SettingRow label="Show Quality Badges" description="Display HD badge for Hi-Res tracks">
+                    <Toggle checked={settings.showQualityBadges} onChange={(v) => setSetting('showQualityBadges', v)} />
+                  </SettingRow>
+                  <SettingRow label="Album release year" description="Show original album year instead of track/remaster date">
+                    <Toggle checked={settings.albumReleaseYear} onChange={(v) => setSetting('albumReleaseYear', v)} />
+                  </SettingRow>
+                  <SettingRow label="Gapless Playback" description="Play audio without interruption between tracks">
+                    <Toggle checked={settings.gaplessPlayback} onChange={(v) => setSetting('gaplessPlayback', v)} />
+                  </SettingRow>
+                  <SettingRow label="Remove Silence" description="Skip leading silence and move to the next track when trailing silence begins">
+                    <Toggle checked={settings.silenceRemoval} onChange={(v) => setSetting('silenceRemoval', v)} />
+                  </SettingRow>
+                  <SettingRow label="Crossfade" description="Overlap tracks with an equal-power fade">
+                    <Toggle checked={settings.crossfade} onChange={(v) => setSetting('crossfade', v)} />
+                  </SettingRow>
+                  <SettingRow label="Crossfade Duration" description="Choose how long both tracks overlap">
+                    <Select<string>
+                      value={String(settings.crossfadeDuration)}
+                      options={[
+                        { value: '1', label: '1 second' },
+                        { value: '2', label: '2 seconds' },
+                        { value: '3', label: '3 seconds' },
+                        { value: '4', label: '4 seconds' },
+                        { value: '5', label: '5 seconds' },
+                        { value: '6', label: '6 seconds' },
+                        { value: '8', label: '8 seconds' },
+                        { value: '10', label: '10 seconds' },
+                        { value: '12', label: '12 seconds' },
+                      ]}
+                      onChange={(v) => setSetting('crossfadeDuration', Number(v))}
+                    />
+                  </SettingRow>
+                  <SettingRow label="Mono Audio" description="Combine left and right channels into mono">
                     <Toggle checked={settings.monoAudio} onChange={(v) => setSetting('monoAudio', v)} />
                   </SettingRow>
-                  <SettingRow label="Exponential Volume" description="More natural volume control curve">
-                    <Toggle checked={settings.exponentialVolume} onChange={(v) => setSetting('exponentialVolume', v)} />
+                  <SettingRow label="Binaural / Spatial DSP" description="Multichannel HRTF rendering for Atmos & 3D Audio, crossfeed for stereo">
+                    <Toggle checked={settings.binauralDsp} onChange={(v) => setSetting('binauralDsp', v)} />
                   </SettingRow>
-                  <SettingRow label="Crossfade" description="Smooth transition between tracks">
-                    <NumberInput value={settings.crossfade} onChange={(v) => setSetting('crossfade', v)} min={0} max={12} suffix="s" />
+                  <SettingRow label="Auto-enable for Spatial Audio" description="Automatically activate when Atmos or 3D content is detected">
+                    <Toggle checked={settings.autoEnableSpatial} onChange={(v) => setSetting('autoEnableSpatial', v)} />
                   </SettingRow>
                 </div>
               )}
@@ -310,43 +347,77 @@ export default function SettingsPage() {
               {activeTab === 'downloads' && (
                 <div>
                   <h2 className="font-display font-semibold text-base mb-3">Download Settings</h2>
-                  <SettingRow label="Download Quality" description="Quality for downloaded tracks">
-                    <Select<DownloadQuality>
+                  <SettingRow label="Download Quality" description="Quality for track downloads">
+                    <Select<string>
                       value={settings.downloadQuality}
                       options={[
-                        { value: 'HIGH', label: 'High (320 kbps)' },
-                        { value: 'LOSSLESS', label: 'Lossless (FLAC)' },
-                        { value: 'HI_RES_LOSSLESS', label: 'Hi-Res Lossless' },
+                        { value: 'DOLBY_ATMOS_EAC3_HIGH', label: 'Dolby Atmos — E-AC-3 High' },
+                        { value: 'DOLBY_ATMOS_EAC3_LOW', label: 'Dolby Atmos — E-AC-3 Low' },
+                        { value: 'DOLBY_ATMOS_AC4_HIGH', label: 'Dolby Atmos — AC-4 High' },
+                        { value: 'DOLBY_ATMOS_AC4_LOW', label: 'Dolby Atmos — AC-4 Low' },
+                        { value: 'HI_RES_LOSSLESS', label: 'Hi-Res Lossless (24-bit)' },
+                        { value: 'LOSSLESS', label: 'Lossless (16-bit)' },
+                        { value: 'HIGH', label: 'High' },
+                        { value: 'LOW', label: 'Low' },
                       ]}
                       onChange={(v) => setSetting('downloadQuality', v)}
                     />
                   </SettingRow>
-                  <SettingRow label="Lossless Container" description="File format for lossless downloads">
-                    <Select<LosslessContainer>
+                  <SettingRow label="Lossless Container" description="Container format for lossless downloads">
+                    <Select<string>
                       value={settings.losslessContainer}
                       options={[
-                        { value: 'flac', label: 'FLAC' },
-                        { value: 'alac', label: 'ALAC (M4A)' },
-                        { value: 'wav', label: 'WAV' },
+                        { value: 'nochange', label: "Don't change" },
                       ]}
                       onChange={(v) => setSetting('losslessContainer', v)}
                     />
                   </SettingRow>
-                  <SettingRow label="Embed Metadata" description="Include artist, album, and track info in files">
-                    <Toggle checked={settings.embedMetadata} onChange={(v) => setSetting('embedMetadata', v)} />
-                  </SettingRow>
-                  <SettingRow label="Embed Lyrics" description="Include synced lyrics in downloaded files">
-                    <Toggle checked={settings.embedLyrics} onChange={(v) => setSetting('embedLyrics', v)} />
-                  </SettingRow>
-                  <SettingRow label="Cover Art Size" description="Resolution of embedded cover art">
+                  <SettingRow label="Bulk Download Method" description="Choose how multiple tracks are downloaded together">
                     <Select<string>
-                      value={String(settings.coverArtSize)}
+                      value={settings.bulkDownloadMethod}
                       options={[
-                        { value: '320', label: '320x320' },
-                        { value: '640', label: '640x640' },
-                        { value: '1280', label: '1280x1280' },
+                        { value: 'zip', label: 'ZIP Archive' },
+                        { value: 'folder', label: 'Folder Picker' },
+                        { value: 'local', label: 'Local Media Folder' },
+                        { value: 'individual', label: 'Individual Files' },
                       ]}
-                      onChange={(v) => setSetting('coverArtSize', Number(v) as CoverArtSize)}
+                      onChange={(v) => setSetting('bulkDownloadMethod', v)}
+                    />
+                  </SettingRow>
+                  <SettingRow label="Remember Last Folder" description="Re-use the last chosen directory for Folder Picker downloads">
+                    <Toggle checked={settings.rememberLastFolder} onChange={(v) => setSetting('rememberLastFolder', v)} />
+                  </SettingRow>
+                  <SettingRow label="Single Downloads to Folder" description="Save individual track downloads directly to the configured folder instead of triggering a browser download">
+                    <Toggle checked={settings.singleToFolder} onChange={(v) => setSetting('singleToFolder', v)} />
+                  </SettingRow>
+                  <SettingRow label="Force ZIP as Blob" description="Download ZIP in memory instead of streaming to disk">
+                    <Toggle checked={settings.forceZipBlob} onChange={(v) => setSetting('forceZipBlob', v)} />
+                  </SettingRow>
+                  <SettingRow label="Write Artists Separately" description="Write artists separately to metadata. Requires player support.">
+                    <Toggle checked={settings.writeArtistsSeparately} onChange={(v) => setSetting('writeArtistsSeparately', v)} />
+                  </SettingRow>
+                  <SettingRow label="Download Lyrics" description="Include .lrc files when downloading tracks/albums">
+                    <Toggle checked={settings.downloadLyrics} onChange={(v) => setSetting('downloadLyrics', v)} />
+                  </SettingRow>
+                  <SettingRow label="Romaji Lyrics" description="Convert Japanese lyrics to Romaji (Latin characters)">
+                    <Toggle checked={settings.romajiLyrics} onChange={(v) => setSetting('romajiLyrics', v)} />
+                  </SettingRow>
+                  <SettingRow label="Cover Art Size" description="Size for downloaded/embedded cover art">
+                    <input
+                      type="text"
+                      value={settings.coverArtSize}
+                      onChange={(e) => setSetting('coverArtSize', e.target.value)}
+                      placeholder="1280x1280"
+                      className="bg-secondary text-foreground text-xs rounded-lg px-3 py-1.5 outline-none border border-border focus:ring-1 focus:ring-primary/20 w-32 text-right"
+                    />
+                  </SettingRow>
+                  <SettingRow label="Filename Template" description="Template for downloaded files">
+                    <input
+                      type="text"
+                      value={settings.filenameTemplate}
+                      onChange={(e) => setSetting('filenameTemplate', e.target.value)}
+                      placeholder="{trackNumber}. {title}"
+                      className="bg-secondary text-foreground text-xs rounded-lg px-3 py-1.5 outline-none border border-border focus:ring-1 focus:ring-primary/20 w-48"
                     />
                   </SettingRow>
                 </div>
