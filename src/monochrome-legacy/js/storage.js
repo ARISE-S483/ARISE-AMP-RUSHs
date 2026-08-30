@@ -3,12 +3,38 @@
 import { SVG_RIGHT_ARROW } from './icons';
 import { isIos, isSafari } from './platform-detection.ts';
 
+const CANONICAL_INSTANCES = {
+    api: [
+        { url: "https://eu-central.monochrome.tf", isUser: false },
+        { url: "https://us-west.monochrome.tf", isUser: false },
+        { url: "https://arran.monochrome.tf", isUser: false },
+        { url: "https://api.monochrome.tf/", isUser: false },
+        { url: "https://monochrome-api.samidy.com", isUser: false },
+        { url: "https://triton.squid.wtf", isUser: false },
+        { url: "https://wolf.qqdl.site", isUser: false },
+        { url: "https://maus.qqdl.site", isUser: false },
+        { url: "https://vogel.qqdl.site", isUser: false },
+        { url: "https://hund.qqdl.site", isUser: false },
+        { url: "https://tidal.kinoplus.online", isUser: false }
+    ],
+    streaming: [
+        { url: "https://arran.monochrome.tf", isUser: false },
+        { url: "https://triton.squid.wtf", isUser: false },
+        { url: "https://wolf.qqdl.site", isUser: false },
+        { url: "https://maus.qqdl.site", isUser: false },
+        { url: "https://vogel.qqdl.site", isUser: false },
+        { url: "https://katze.qqdl.site", isUser: false },
+        { url: "https://hund.qqdl.site", isUser: false },
+        { url: "https://hifi.p1nkhamster.xyz/", isUser: false }
+    ]
+};
+
 export const apiSettings = {
     STORAGE_KEY: 'monochrome-api-instances-v9',
     INSTANCES_URLS: [],
-    defaultInstances: { api: [], streaming: [] },
+    defaultInstances: CANONICAL_INSTANCES,
     userInstances: null,
-    instancesLoaded: false,
+    instancesLoaded: true,
     _loadPromise: null,
 
     _loadUserInstances() {
@@ -31,105 +57,7 @@ export const apiSettings = {
     },
 
     async loadInstancesFromGitHub() {
-        if (this.instancesLoaded) {
-            return this.defaultInstances;
-        }
-
-        if (this._loadPromise) {
-            return this._loadPromise;
-        }
-
-        this._loadPromise = (async () => {
-            const cachedData = localStorage.getItem(this.STORAGE_KEY);
-            if (cachedData) {
-                try {
-                    const parsed = JSON.parse(cachedData);
-                    const now = Date.now();
-                    // Check if cached data is less than 15 minutes old
-                    if (parsed.timestamp && now - parsed.timestamp < 15 * 60 * 1000) {
-                        this.defaultInstances = {
-                            api: Array.isArray(parsed.data?.api) ? parsed.data.api : [],
-                            streaming: Array.isArray(parsed.data?.streaming) ? parsed.data.streaming : [],
-                        };
-                        this.instancesLoaded = true;
-                        this._loadPromise = null;
-                        return this.defaultInstances;
-                    }
-                } catch (e) {
-                    console.warn('Failed to parse cached instances:', e);
-                }
-            }
-
-            let data = null;
-            let fetchError = null;
-
-            // Prefer first URL, only try others as fallback
-            const urls = [...this.INSTANCES_URLS];
-
-            for (const url of urls) {
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    data = await response.json();
-                    break; // Success, exit loop
-                } catch (error) {
-                    console.warn(`Failed to fetch from ${url}:`, error);
-                    fetchError = error;
-                }
-            }
-
-            if (!data) {
-                console.error('Failed to load instances from all uptime APIs:', fetchError);
-                this.defaultInstances = {
-                    api: [{ url: 'https://lol.samidy.workers.dev', version: '2.10' }],
-                    streaming: [],
-                };
-                this.instancesLoaded = true;
-                this._loadPromise = null;
-                return this.defaultInstances;
-            }
-
-            let groupedInstances = { api: [], streaming: [] };
-
-            const isBlockedInstance = (item) => {
-                const url = typeof item === 'string' ? item : item.url;
-                return url && /\.squid\.wtf/i.test(url);
-            };
-
-            if (data.api && Array.isArray(data.api)) {
-                groupedInstances.api = data.api.filter((item) => !isBlockedInstance(item));
-            }
-
-            if (data.streaming && Array.isArray(data.streaming)) {
-                groupedInstances.streaming = data.streaming.filter((item) => !isBlockedInstance(item));
-            } else if (groupedInstances.api.length > 0) {
-                groupedInstances.streaming = [...groupedInstances.api];
-            }
-
-            if (groupedInstances.api.length === 0) {
-                groupedInstances.api = [{ url: 'https://lol.samidy.workers.dev', version: '2.10' }];
-            }
-
-            this.defaultInstances = groupedInstances;
-            this.instancesLoaded = true;
-
-            try {
-                localStorage.setItem(
-                    this.STORAGE_KEY,
-                    JSON.stringify({
-                        timestamp: Date.now(),
-                        data: groupedInstances,
-                    })
-                );
-            } catch (e) {
-                console.warn('Failed to cache instances:', e);
-            }
-
-            this._loadPromise = null;
-            return groupedInstances;
-        })();
-
-        return this._loadPromise;
+        return this.defaultInstances || CANONICAL_INSTANCES;
     },
 
     async getInstances(type = 'api', _sortBySpeed = false) {

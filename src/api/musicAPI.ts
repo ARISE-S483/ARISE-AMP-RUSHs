@@ -2,10 +2,6 @@
 // Routes all music functions through Monochrome's MusicAPI
 // UI components remain unchanged — only this API layer is modified
 
-import { hifiAPI } from './piped';
-import { pipedClient } from './pipedClient';
-import { jiosaavnClient } from './jiosaavnClient';
-import { ytmusicClient } from './ytmusicClient';
 import type { Track, Artist, Album, Playlist, SearchResults } from './types';
 import {
   monoSearch,
@@ -122,12 +118,12 @@ class MusicAPI {
   }
 
   // ===== Streaming =====
-  // Routes through Monochrome's stream resolution, with fallbacks
+  // Routes exclusively through Monochrome's stream resolution
   async getStreamUrl(track: Track, quality: string = 'HIGH'): Promise<string | null> {
     // If track has a pre-resolved stream URL, use it
     if (track.streamUrl) return track.streamUrl;
 
-    // ─── PRIMARY: Monochrome stream resolution ───
+    // ─── Monochrome stream resolution ───
     try {
       const url = await monoGetStreamUrl(track.id, quality);
       if (url) {
@@ -138,43 +134,7 @@ class MusicAPI {
       console.warn('[musicAPI] Monochrome stream failed:', e);
     }
 
-    // ─── FALLBACK 1: JioSaavn bridge ───
-    const bridgeQuery = `${track.title} ${track.artist?.name || ''}`;
-    try {
-      const jioResults = await Promise.race([
-        jiosaavnClient.searchTracks(bridgeQuery),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
-      ]) as Track[];
-
-      const trackTitleNorm = normalizeTitle(track.title);
-      const match = jioResults.find(t => {
-        const t1 = normalizeTitle(t.title);
-        return t1 === trackTitleNorm ||
-          (t1.startsWith(trackTitleNorm) && trackTitleNorm.length > 4) ||
-          (trackTitleNorm.startsWith(t1) && t1.length > 4);
-      });
-
-      if (match) {
-        const jioUrl = await jiosaavnClient.getStreamUrl(String(match.id));
-        if (jioUrl) {
-          console.info(`[musicAPI] JioSaavn bridge success for "${track.title}"`);
-          return jioUrl;
-        }
-      }
-    } catch { /* continue */ }
-
-    // ─── FALLBACK 2: Piped (YouTube proxy) ───
-    if (track.videoId) {
-      try {
-        const pipedUrl = await pipedClient.getStreamUrl(track.videoId);
-        if (pipedUrl) {
-          console.info(`[musicAPI] Piped stream success for "${track.title}"`);
-          return `/api/ytmusic/proxy?url=${encodeURIComponent(pipedUrl)}`;
-        }
-      } catch { /* continue */ }
-    }
-
-    console.warn(`[musicAPI] All stream sources exhausted for "${track.title}"`);
+    console.warn(`[musicAPI] Stream resolution failed for "${track.title}"`);
     return null;
   }
 
