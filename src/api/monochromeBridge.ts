@@ -4,6 +4,7 @@
 
 import { MusicAPI } from '../monochrome-legacy/js/music-api.js';
 import { apiSettings } from '../monochrome-legacy/js/storage.js';
+import { HiFiClient } from '../monochrome-legacy/js/HiFi';
 import { SubsonicClient } from './subsonicClient';
 import type { SearchResults, Track, Album, Artist, Playlist, Lyrics } from './types';
 
@@ -143,23 +144,34 @@ const MONOCHROME_STREAMING_INSTANCES = [
   "https://hifi.p1nkhamster.xyz/"
 ];
 
+let musicApiInstance: MusicAPI | null = null;
 let isInitialized = false;
 
 async function ensureInitialized() {
   if (!isInitialized) {
-    if (!MusicAPI.instance) {
-      // Hardcode the default instances so they are immediately available
-      apiSettings.defaultInstances = {
-        api: MONOCHROME_API_INSTANCES.map(url => ({ url, isUser: false })),
-        streaming: MONOCHROME_STREAMING_INSTANCES.map(url => ({ url, isUser: false })),
-      };
-      
-      // Tell storage.js that instances are already loaded, to prevent 
-      // loadInstancesFromGitHub() from overwriting our instances with a broken upstream fallback.
-      apiSettings.instancesLoaded = true;
+    apiSettings.defaultInstances = {
+      api: MONOCHROME_API_INSTANCES.map(url => ({ url, isUser: false })),
+      streaming: MONOCHROME_STREAMING_INSTANCES.map(url => ({ url, isUser: false })),
+    };
+    
+    apiSettings.instancesLoaded = true;
 
-      // Initialize exactly like monochrome's app.js: MusicAPI.initialize(apiSettings)
-      await MusicAPI.initialize(apiSettings);
+    try {
+        await HiFiClient.initialize({
+            storage: [localStorage],
+            token: localStorage.getItem('hifi_token') || undefined,
+            tokenExpiry: parseInt(localStorage.getItem('hifi_token_expiry') || '0'),
+        });
+    } catch (err) {
+        console.error('Failed to initialize HiFiClient:', err);
+    }
+
+    if (!MusicAPI.instance) {
+      try {
+        await MusicAPI.initialize(apiSettings);
+      } catch {
+        // Already initialized
+      }
     }
     isInitialized = true;
   }
