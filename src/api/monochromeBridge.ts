@@ -3,14 +3,61 @@
 // All music functions route through monochrome's unified API
 
 import { MusicAPI } from '../monochrome-legacy/js/music-api.js';
+import { apiSettings } from '../monochrome-legacy/js/storage.js';
 import type { SearchResults, Track, Album, Artist, Playlist, Lyrics } from './types';
+
+// ─── Monochrome API + Streaming instances ───
+const MONOCHROME_API_INSTANCES = [
+  'https://eu-central.monochrome.tf',
+  'https://us-west.monochrome.tf',
+  'https://arran.monochrome.tf',
+  'https://api.monochrome.tf/',
+  'https://monochrome-api.samidy.com',
+  'https://triton.squid.wtf',
+  'https://wolf.qqdl.site',
+  'https://maus.qqdl.site',
+  'https://vogel.qqdl.site',
+  'https://hund.qqdl.site',
+  'https://tidal.kinoplus.online',
+];
+
+const MONOCHROME_STREAMING_INSTANCES = [
+  'https://arran.monochrome.tf',
+  'https://triton.squid.wtf',
+  'https://wolf.qqdl.site',
+  'https://maus.qqdl.site',
+  'https://vogel.qqdl.site',
+  'https://katze.qqdl.site',
+  'https://hund.qqdl.site',
+  'https://hifi.p1nkhamster.xyz/',
+];
 
 let isInitialized = false;
 
 async function ensureInitialized() {
   if (!isInitialized) {
     if (!MusicAPI.instance) {
-      await MusicAPI.initialize({});
+      // Pre-configure apiSettings with instances so LosslessAPI can reach them
+      apiSettings.INSTANCES_URLS = [
+        'https://raw.githubusercontent.com/monochrome-music/monochrome/main/INSTANCES.md'
+      ];
+      apiSettings.defaultInstances = {
+        api: MONOCHROME_API_INSTANCES.map(url => ({ url, isUser: false })),
+        streaming: MONOCHROME_STREAMING_INSTANCES.map(url => ({ url, isUser: false })),
+      };
+      apiSettings.instancesLoaded = true;
+
+      // Initialize MusicAPI with settings that provide getInstances
+      await MusicAPI.initialize({
+        getInstances: async (type = 'api') => {
+          return apiSettings.getInstances(type);
+        },
+        refreshInstances: async () => {
+          apiSettings.instancesLoaded = false;
+          apiSettings._loadPromise = null;
+          await apiSettings.loadInstancesFromGitHub();
+        },
+      });
     }
     isInitialized = true;
   }

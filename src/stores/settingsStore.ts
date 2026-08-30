@@ -97,7 +97,7 @@ interface SettingsState {
 const STORAGE_KEY = 'melodies_settings';
 
 const defaultSettings = {
-  audioQuality: 'HIGH',
+  audioQuality: 'AUTO',
   preferDolbyAtmos: false,
   nativeOsAtmos: true,
   showQualityBadges: true,
