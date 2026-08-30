@@ -22,9 +22,42 @@ interface InstanceEntry {
   lastChecked?: number;
 }
 
-const STORAGE_KEY = 'melodies_instances_v2';
+const STORAGE_KEY = 'melodies_instances_v3';
 
-const DEFAULT_INSTANCES: InstanceEntry[] = [];
+const DEFAULT_INSTANCES: InstanceEntry[] = [
+  // From user's JSON - API
+  { url: 'https://eu-central.monochrome.tf', type: 'api', enabled: true },
+  { url: 'https://us-west.monochrome.tf', type: 'api', enabled: true },
+  { url: 'https://arran.monochrome.tf', type: 'api', enabled: true },
+  { url: 'https://api.monochrome.tf', type: 'api', enabled: true },
+  { url: 'https://monochrome-api.samidy.com', type: 'api', enabled: true },
+  { url: 'https://triton.squid.wtf', type: 'api', enabled: true },
+  { url: 'https://wolf.qqdl.site', type: 'api', enabled: true },
+  { url: 'https://maus.qqdl.site', type: 'api', enabled: true },
+  { url: 'https://vogel.qqdl.site', type: 'api', enabled: true },
+  { url: 'https://hund.qqdl.site', type: 'api', enabled: true },
+  { url: 'https://tidal.kinoplus.online', type: 'api', enabled: true },
+  
+  // From user's JSON - Streaming
+  { url: 'https://arran.monochrome.tf', type: 'streaming', enabled: true },
+  { url: 'https://triton.squid.wtf', type: 'streaming', enabled: true },
+  { url: 'https://wolf.qqdl.site', type: 'streaming', enabled: true },
+  { url: 'https://maus.qqdl.site', type: 'streaming', enabled: true },
+  { url: 'https://vogel.qqdl.site', type: 'streaming', enabled: true },
+  { url: 'https://katze.qqdl.site', type: 'streaming', enabled: true },
+  { url: 'https://hund.qqdl.site', type: 'streaming', enabled: true },
+  { url: 'https://hifi.p1nkhamster.xyz', type: 'streaming', enabled: true },
+
+  // From INSTANCES.md
+  { url: 'https://monochrome.tf', type: 'api', enabled: true },
+  { url: 'https://monochrome.samidy.com', type: 'api', enabled: true },
+  { url: 'https://lossless.wtf', type: 'api', enabled: true },
+  { url: 'https://if-it-runs-ship-it.lol', type: 'api', enabled: true },
+  { url: 'https://monochrome.tf', type: 'streaming', enabled: true },
+  { url: 'https://monochrome.samidy.com', type: 'streaming', enabled: true },
+  { url: 'https://lossless.wtf', type: 'streaming', enabled: true },
+  { url: 'https://if-it-runs-ship-it.lol', type: 'streaming', enabled: true },
+];
 
 function loadInstances(): InstanceEntry[] {
   try {
