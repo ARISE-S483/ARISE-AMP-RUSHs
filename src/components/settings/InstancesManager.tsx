@@ -197,8 +197,6 @@ export default function InstancesManager() {
   const [showKey, setShowKey] = useState(false);
 
   const rapidapiKey = useRapidApiStore(state => state.rapidapiKey);
-  const setRapidapiKey = useRapidApiStore(state => state.setRapidapiKey);
-  const useYtdlpFirst = useSettingsStore(state => state.useYtdlpFirst);
   const autoRefreshInstances = useSettingsStore(state => state.autoRefreshInstances);
   const setSetting = useSettingsStore(state => state.setSetting);
 
@@ -389,36 +387,6 @@ export default function InstancesManager() {
       </p>
 
 
-
-      {/* Streaming Preferences Tab */}
-      {activeType === 'streaming' && (
-        <div className="mb-6 p-4 rounded-xl border border-border/50 bg-secondary/10">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Zap size={14} className="text-primary" /> yt-dlp Priority Streaming
-              </h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Attempt to extract audio streams using local yt-dlp before trying Web APIs. Highly recommended for avoiding 403 errors and enabling high-quality streams.
-              </p>
-            </div>
-            <button
-              onClick={() => setSetting('useYtdlpFirst', !useYtdlpFirst)}
-              className={`w-10 h-5 rounded-full transition-colors duration-200 relative shrink-0 ${
-                useYtdlpFirst ? 'bg-primary' : 'bg-secondary'
-              }`}
-            >
-              <motion.div
-                className={`absolute top-0.5 w-4 h-4 rounded-full ${
-                  useYtdlpFirst ? 'bg-primary-foreground' : 'bg-muted-foreground'
-                }`}
-                animate={{ left: useYtdlpFirst ? 22 : 2 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-              />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Auto Refresh Toggle for all tabs */}
       <div className="mb-6 p-4 rounded-xl border border-border/50 bg-secondary/10">

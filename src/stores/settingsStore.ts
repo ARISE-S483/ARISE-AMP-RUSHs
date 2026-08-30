@@ -86,7 +86,6 @@ interface SettingsState {
   showPlaylists: boolean;
 
   // Streaming
-  useYtdlpFirst: boolean;
   autoRefreshInstances: boolean;
 
   // Actions
@@ -157,7 +156,6 @@ const defaultSettings = {
   showRecentlyPlayed: true,
   showFavorites: true,
   showPlaylists: true,
-  useYtdlpFirst: true,
   autoRefreshInstances: false,
 };
 
