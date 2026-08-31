@@ -7,7 +7,7 @@ import {
 
 // ========== Types & Storage ==========
 
-type InstanceType = 'api' | 'streaming' | 'jiosaavn' | 'subsonic';
+type InstanceType = 'api' | 'streaming' | 'jiosaavn' | 'subsonic' | 'ytdlp';
 
 interface InstanceEntry {
   url: string;
@@ -101,7 +101,7 @@ function loadInstances(): InstanceEntry[] {
     if (stored) {
       const parsed = JSON.parse(stored) as InstanceEntry[];
       return parsed.filter(i => {
-        const validTypes: InstanceType[] = ['api', 'streaming', 'jiosaavn'];
+        const validTypes: InstanceType[] = ['api', 'streaming', 'jiosaavn', 'subsonic', 'ytdlp'];
         // Migrate old separate types into streaming
         if (['deezer', 'freeyourmusic', 'shazam', 'spotify23', 'ytmusic', 'piped'].includes(i.type)) {
           i.type = 'streaming' as InstanceType;
@@ -126,6 +126,7 @@ const typeTabs: { id: InstanceType; label: string; icon: React.ElementType }[] =
   { id: 'streaming', label: 'Streaming & Video', icon: Zap },
   { id: 'jiosaavn', label: 'JioSaavn', icon: Music2 },
   { id: 'subsonic', label: 'Subsonic / HiFi', icon: Server },
+  { id: 'ytdlp', label: 'yt-dlp', icon: Youtube },
 ];
 
 function StatusBadge({ status, latency }: { status?: string; latency?: number }) {
@@ -306,6 +307,8 @@ export default function InstancesPage() {
           } else if (activeType === 'subsonic') {
             testPath = '/rest/ping.view?v=1.16.1&c=arise-amp-rush2&f=json';
             // Ping doesn't strictly need auth on some servers, but let's just do a basic ping
+          } else if (activeType === 'ytdlp') {
+            testPath = '/test';
           } else if (activeType === 'streaming') {
             // Smart path detection for streaming URLs
             if (isRapidApiUrl) {
