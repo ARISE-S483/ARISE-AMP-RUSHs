@@ -1,4 +1,4 @@
-// @ts-nocheck
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Monochrome Bridge - Wraps legacy MusicAPI for React consumption
 // All music functions route through monochrome's unified API
 
@@ -16,7 +16,7 @@ function getSubsonicInstances(): any[] {
       const parsed = JSON.parse(stored);
       return parsed.filter((i: any) => i.type === 'subsonic' && i.enabled);
     }
-  } catch { }
+  } catch { /* ignore */ }
   return [];
 }
 
@@ -144,7 +144,6 @@ const MONOCHROME_STREAMING_INSTANCES = [
   "https://hifi.p1nkhamster.xyz/"
 ];
 
-let musicApiInstance: MusicAPI | null = null;
 let isInitialized = false;
 
 async function ensureInitialized() {
@@ -335,7 +334,7 @@ export async function monoSearchTracks(query: string): Promise<Track[]> {
     try {
       const res = await subClient.search(query);
       return (res.song || []).map((t: any) => adaptSubsonicTrack(t, subClient));
-    } catch {}
+    } catch { /* ignore */ }
   }
   const api = await ensureInitialized();
   const res = await api.searchTracks(query);
@@ -349,7 +348,7 @@ export async function monoSearchArtists(query: string): Promise<Artist[]> {
     try {
       const res = await subClient.search(query);
       return (res.artist || []).map((a: any) => adaptSubsonicArtist(a, subClient));
-    } catch {}
+    } catch { /* ignore */ }
   }
   const api = await ensureInitialized();
   const res = await api.searchArtists(query);
@@ -363,7 +362,7 @@ export async function monoSearchAlbums(query: string): Promise<Album[]> {
     try {
       const res = await subClient.search(query);
       return (res.album || []).map((a: any) => adaptSubsonicAlbum(a, subClient));
-    } catch {}
+    } catch { /* ignore */ }
   }
   const api = await ensureInitialized();
   const res = await api.searchAlbums(query);
@@ -385,7 +384,7 @@ export async function monoGetTrack(id: string | number): Promise<Track> {
     try {
       const t = await subClient.getTrack(id.toString());
       return adaptSubsonicTrack(t, subClient);
-    } catch {}
+    } catch { /* ignore */ }
   }
   const api = await ensureInitialized();
   const t = await api.getTrack(id);
@@ -398,7 +397,7 @@ export async function monoGetAlbum(id: string | number): Promise<Album> {
     try {
       const a = await subClient.getAlbum(id.toString());
       return adaptSubsonicAlbum(a, subClient);
-    } catch {}
+    } catch { /* ignore */ }
   }
   const api = await ensureInitialized();
   const a = await api.getAlbum(id);
@@ -411,7 +410,7 @@ export async function monoGetArtist(id: string | number): Promise<Artist> {
     try {
       const a = await subClient.getArtist(id.toString());
       return adaptSubsonicArtist(a, subClient);
-    } catch {}
+    } catch { /* ignore */ }
   }
   const api = await ensureInitialized();
   const a = await api.getArtist(id);
@@ -424,7 +423,7 @@ export async function monoGetPlaylist(id: string): Promise<Playlist> {
     try {
       const p = await subClient.getPlaylist(id);
       return adaptSubsonicPlaylist(p, subClient);
-    } catch {}
+    } catch { /* ignore */ }
   }
   const api = await ensureInitialized();
   const p = await api.getPlaylist(id);

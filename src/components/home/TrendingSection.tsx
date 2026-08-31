@@ -273,7 +273,7 @@ export function MadeForYou() {
           // 2. Supplement: Per-track recs from the top favorite (deepens personalization depth)
           if (all.length < 15 && favorites.length > 0) {
             try {
-              const favRecs = await musicAPI.getTrackRecommendations(favorites[0]);
+              const favRecs = await musicAPI.getUpNexts(favorites[0]);
               addUnique(favRecs);
             } catch { /* continue */ }
           }
@@ -373,7 +373,7 @@ export function TrendingSongs() {
 
           // Get per-track recommendations from each seed concurrently
           const recPromises = diverseSeeds.map(seed =>
-            musicAPI.getTrackRecommendations(seed).catch(() => [] as Track[])
+            musicAPI.getUpNexts(seed).catch(() => [] as Track[])
           );
           const recResults = await Promise.allSettled(recPromises);
 

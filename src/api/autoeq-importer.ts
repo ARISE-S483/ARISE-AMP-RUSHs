@@ -110,7 +110,7 @@ async function fetchAutoEqIndex() {
         try {
             const str = localStorage.getItem(CACHE_KEY);
             if (str) cached = JSON.parse(str);
-        } catch(e) {}
+        } catch(e) { /* ignore */ }
         if (cached && Date.now() - cached.timestamp < CACHE_EXPIRY) {
             console.log('[AutoEQ] Loaded index from cache');
             return cached.data;
@@ -139,7 +139,7 @@ async function fetchAutoEqIndex() {
                 try {
                     const str = localStorage.getItem(CACHE_KEY);
                     if (str) cached = JSON.parse(str);
-                } catch(e) {}
+                } catch(e) { /* ignore */ }
                 
                 if (cached && Date.now() - cached.timestamp < CACHE_EXPIRY) {
                     console.warn('[AutoEQ] GitHub API limit reached. Using stale cache.');
@@ -225,8 +225,11 @@ async function fetchAutoEqIndex() {
             console.error('[AutoEQ] Failed to fetch index:', err);
         }
         try {
-            const cached = await db.getSetting(CACHE_KEY);
-            if (cached?.data) return cached.data;
+            const str = localStorage.getItem(CACHE_KEY);
+            if (str) {
+                const cached = JSON.parse(str);
+                if (cached?.data) return cached.data;
+            }
         } catch {
             /* ignore */
         }

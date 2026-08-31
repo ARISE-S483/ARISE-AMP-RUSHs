@@ -6,7 +6,7 @@ import { runAutoEqAlgorithm } from '../../api/autoeq-engine';
 
 export function AutoEQ() {
   const { setBandCount, setGains, setBandTypes, setBandQs, setCustomFrequencies, setPreamp, setPreset } = useEqualizerStore();
-  const [headphones, setHeadphones] = useState<any[]>(POPULAR_HEADPHONES);
+  const [headphones, setHeadphones] = useState(POPULAR_HEADPHONES);
   const [selectedHp, setSelectedHp] = useState(POPULAR_HEADPHONES[0].path);
   const [selectedTarget, setSelectedTarget] = useState('HARMAN_OE_2018');
   const [isCalculating, setIsCalculating] = useState(false);
@@ -77,7 +77,7 @@ export function AutoEQ() {
             onChange={e => setSelectedTarget(e.target.value)}
             className="w-full bg-background border rounded px-2 py-1.5 text-sm"
           >
-            {Object.entries(TARGETS).map(([key, target]: [string, any]) => (
+            {Object.entries(TARGETS).map(([key, target]: [string, any]) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
               <option key={key} value={key}>{target.name}</option>
             ))}
           </select>

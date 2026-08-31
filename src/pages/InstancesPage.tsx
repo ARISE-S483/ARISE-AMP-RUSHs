@@ -104,7 +104,7 @@ function loadInstances(): InstanceEntry[] {
         const validTypes: InstanceType[] = ['api', 'streaming', 'jiosaavn'];
         // Migrate old separate types into streaming
         if (['deezer', 'freeyourmusic', 'shazam', 'spotify23', 'ytmusic', 'piped'].includes(i.type)) {
-          i.type = 'streaming' as any;
+          i.type = 'streaming' as InstanceType;
         }
         return validTypes.includes(i.type as InstanceType);
       });
@@ -121,7 +121,7 @@ function saveInstances(instances: InstanceEntry[]) {
 
 // ========== Components ==========
 
-const typeTabs: { id: InstanceType; label: string; icon: React.ComponentType<any> }[] = [
+const typeTabs: { id: InstanceType; label: string; icon: React.ElementType }[] = [
   { id: 'api', label: 'API (TIDAL)', icon: Server },
   { id: 'streaming', label: 'Streaming & Video', icon: Zap },
   { id: 'jiosaavn', label: 'JioSaavn', icon: Music2 },

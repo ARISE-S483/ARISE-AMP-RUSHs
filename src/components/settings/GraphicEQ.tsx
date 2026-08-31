@@ -127,7 +127,7 @@ export function GraphicEQ() {
               value={gain}
               onChange={(e) => handleGainChange(i, Number(e.target.value))}
               className="w-2 h-32 appearance-none bg-border rounded-full outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-cyan-400 cursor-pointer"
-              style={{ writingMode: 'bt-lr', WebkitAppearance: 'slider-vertical' } as any}
+              style={{ writingMode: 'bt-lr', WebkitAppearance: 'slider-vertical' } as unknown as React.CSSProperties}
             />
             <span className="text-[10px] text-muted-foreground mt-2 w-full text-center truncate" title={formatFreq(frequencies[i])}>
               {formatFreq(frequencies[i])}

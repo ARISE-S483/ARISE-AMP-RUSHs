@@ -21,7 +21,7 @@ export interface Track {
   thumbnail?: string;
   thumbnailLarge?: string;
   // Multi-source fields
-  source?: 'tidal' | 'piped' | 'youtube' | 'jiosaavn' | 'local' | 'rapidapi' | 'shazam' | 'spotify' | 'genius' | 'deezer';
+  source?: 'tidal' | 'piped' | 'youtube' | 'jiosaavn' | 'local' | 'rapidapi' | 'shazam' | 'spotify' | 'genius' | 'deezer' | 'subsonic';
   videoId?: string;        // YouTube video ID (Piped source)
   streamUrl?: string;      // Direct stream URL (when pre-resolved)
   previewUrl?: string;     // 30s preview URL (Spotify, Deezer)

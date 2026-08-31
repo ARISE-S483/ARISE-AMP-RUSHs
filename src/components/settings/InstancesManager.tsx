@@ -95,7 +95,7 @@ function saveInstances(instances: InstanceEntry[]) {
 
 // ========== Sub-components ==========
 
-const typeTabs: { id: InstanceType; label: string; icon: React.ComponentType<any> }[] = [
+const typeTabs: { id: InstanceType; label: string; icon: React.ElementType }[] = [
   { id: 'api', label: 'API (TIDAL)', icon: Server },
   { id: 'streaming', label: 'Streaming & Video', icon: Zap },
   { id: 'jiosaavn', label: 'JioSaavn', icon: Music2 },
@@ -289,7 +289,7 @@ export default function InstancesManager() {
               try { 
                  const urlObj = new URL(inst.url);
                  targetUrl = urlObj.origin; // Just check if the host is up and responding
-              } catch {}
+              } catch { /* ignore */ }
               
               const proxyUrl = `/api/cors-proxy?url=${encodeURIComponent(targetUrl)}`;
               const authController = new AbortController();

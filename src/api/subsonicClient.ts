@@ -27,6 +27,7 @@ export class SubsonicClient {
     return `u=${encodeURIComponent(this.config.username)}&t=${token}&s=${salt}&v=${this.clientVersion}&c=${this.clientName}&f=json`;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async request(endpoint: string, params: Record<string, string> = {}): Promise<any> {
     const queryParams = new URLSearchParams(params).toString();
     const authParams = this.getAuthParams();

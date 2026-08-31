@@ -9,6 +9,7 @@ import { Visualizer } from './Visualizer';
 import { downloadTrack } from '@/lib/download';
 import { formatTime } from '@/lib/format';
 import { musicAPI } from '@/api/musicAPI';
+import { Track } from '@/api/types';
 import { toast } from 'sonner';
 import {
   Play, Pause, SkipBack, SkipForward,
@@ -230,7 +231,7 @@ function SleepTimerButton({ size = 22 }: { size?: number }) {
 }
 
 // ─── Source Quality Badge ───
-function TrackSourceBadge({ track, large = false }: { track: any, large?: boolean }) {
+function TrackSourceBadge({ track, large = false }: { track: Track | Partial<Track> | null | undefined, large?: boolean }) {
   if (!track) return null;
   
   const audioQuality = (track.audioQuality || '').toUpperCase();
@@ -581,7 +582,7 @@ function LyricsTab() {
 
   useEffect(() => {
     if (currentTrack) setOffsetState(getStoredOffset(currentTrack.id));
-  }, [currentTrack?.id]);
+  }, [currentTrack]);
 
   const setOffset = useCallback((newOffset: number) => {
     const rounded = Math.round(newOffset * 10) / 10;
@@ -599,7 +600,7 @@ function LyricsTab() {
       else setError('No lyrics found');
       setLoading(false);
     }).catch(() => { setError('Failed to load lyrics'); setLoading(false); });
-  }, [currentTrack?.id]);
+  }, [currentTrack]);
 
   useEffect(() => {
     if (synced && activeLineRef.current) {
@@ -842,7 +843,14 @@ function QueueTab({ onCollapse }: { onCollapse: () => void }) {
               {/* Actions - always visible like monochrome */}
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button
-                  onClick={(e) => { e.stopPropagation(); liked ? removeFromFavorites(String(track.id)) : addToFavorites(track); }}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    if (liked) {
+                      removeFromFavorites(String(track.id));
+                    } else {
+                      addToFavorites(track);
+                    }
+                  }}
                   className="p-1 transition-colors"
                 >
                   <Heart size={14} className={liked ? 'fill-primary text-primary' : 'text-muted-foreground/40 hover:text-foreground'} />

@@ -48,7 +48,7 @@ export function ParametricEQ() {
     );
   }, [bandCount, gains, bandTypes, bandQs, customFrequencies, freqMin, freqMax]);
 
-  const updateBand = (index: number, field: string, value: any) => {
+  const updateBand = (index: number, field: string, value: string | number) => {
     const newBands = [...localBands];
     newBands[index] = { ...newBands[index], [field]: value };
     setLocalBands(newBands);
