@@ -257,6 +257,8 @@ export default function InstancesManager() {
             testPath = '/search/?s=test';
           } else if (activeType === 'jiosaavn') {
             testPath = '/api/search/songs?query=test&limit=1';
+          } else if (activeType === 'ytdlp') {
+            testPath = '/test'; // Will return 400 or 500 but tests connectivity
           } else if (activeType === 'streaming') {
             // Smart path detection for streaming URLs
             if (isRapidApiUrl) {
