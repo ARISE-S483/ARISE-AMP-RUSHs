@@ -10,7 +10,7 @@ import { useSettingsStore } from '@/stores/settingsStore';
 
 // ========== Types & Storage ==========
 
-type InstanceType = 'api' | 'streaming' | 'jiosaavn';
+type InstanceType = 'api' | 'streaming' | 'jiosaavn' | 'ytdlp';
 
 interface InstanceEntry {
   url: string;
@@ -64,7 +64,7 @@ function loadInstances(): InstanceEntry[] {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as InstanceEntry[];
-      const validTypes: InstanceType[] = ['api', 'streaming', 'jiosaavn'];
+      const validTypes: InstanceType[] = ['api', 'streaming', 'jiosaavn', 'ytdlp'];
       // Migrate old separate types into streaming
       const migrated = parsed.map(i => {
         if (['deezer', 'freeyourmusic', 'shazam', 'spotify23', 'ytmusic', 'piped'].includes(i.type)) {
@@ -99,6 +99,7 @@ const typeTabs: { id: InstanceType; label: string; icon: React.ElementType }[] =
   { id: 'api', label: 'API (TIDAL)', icon: Server },
   { id: 'streaming', label: 'Streaming & Video', icon: Zap },
   { id: 'jiosaavn', label: 'JioSaavn', icon: Music2 },
+  { id: 'ytdlp', label: 'yt-dlp', icon: Youtube },
 ];
 
 function StatusBadge({ status, latency }: { status?: string; latency?: number }) {

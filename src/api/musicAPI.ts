@@ -19,6 +19,7 @@ import {
   monoGetArtistPictureUrl,
   monoGetArtistBiography,
 } from './monochromeBridge';
+import { ytdlpClient } from './ytdlpClient';
 
 // ========== Deduplication ==========
 
@@ -132,6 +133,20 @@ class MusicAPI {
       }
     } catch (e) {
       console.warn('[musicAPI] Monochrome stream failed:', e);
+    }
+
+    // ─── Fallback: yt-dlp API ───
+    if (track.videoId || track.source === 'youtube' || track.source === 'piped') {
+      try {
+        const videoId = track.videoId || String(track.id);
+        const ytdlpUrl = await ytdlpClient.getStreamUrl(videoId);
+        if (ytdlpUrl) {
+          console.info(`[musicAPI] yt-dlp stream success for "${track.title}"`);
+          return ytdlpUrl;
+        }
+      } catch (e) {
+        console.warn('[musicAPI] yt-dlp stream failed:', e);
+      }
     }
 
     console.warn(`[musicAPI] Stream resolution failed for "${track.title}"`);
