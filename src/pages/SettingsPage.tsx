@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
 import SyncManagement from '@/components/settings/SyncManagement';
 import { invidiousClient, KNOWN_INVIDIOUS_INSTANCES } from '@/api/invidiousClient';
+import { ytifyClient } from '@/api/ytifyClient';
 import type {
   VisualizerStyle,
   LyricsSize, BackgroundStyle, NowPlayingStyle, BackgroundImage
@@ -285,7 +286,7 @@ export default function SettingsPage() {
               {activeTab === 'audio' && (
                 <div>
                   <h2 className="font-display font-semibold text-base mb-3">Audio Settings</h2>
-                  <InvidiousAudioSettings />
+                  <AudioStreamSourceSettings />
                   <SettingRow label="Loudness Normalization" description="Ad-free playback with YouTube volume normalization (gain = 10^(-loudnessDb / 20)) matching limusic libmpv">
                     <Toggle checked={settings.loudnessNormalization} onChange={(v) => setSetting('loudnessNormalization', v)} />
                   </SettingRow>
@@ -906,19 +907,52 @@ function DataManagement() {
   );
 }
 
-function InvidiousAudioSettings() {
+function AudioStreamSourceSettings() {
   const settings = useSettingsStore();
   const setSetting = settings.setSetting;
-  const [testStatus, setTestStatus] = useState<{ testing: boolean; result?: { ok: boolean; latencyMs: number; version?: string; error?: string } }>({ testing: false });
+  const [youtubejsTestStatus, setYoutubejsTestStatus] = useState<{ testing: boolean; result?: { ok: boolean; latencyMs: number; engine?: string; version?: string; error?: string } }>({ testing: false });
+  const [invidiousTestStatus, setInvidiousTestStatus] = useState<{ testing: boolean; result?: { ok: boolean; latencyMs: number; version?: string; error?: string } }>({ testing: false });
+  const [ytifyTestStatus, setYtifyTestStatus] = useState<{ testing: boolean; result?: { ok: boolean; latencyMs: number; error?: string } }>({ testing: false });
 
-  const handleTest = async () => {
-    setTestStatus({ testing: true });
+  const handleTestYouTubeJs = async () => {
+    setYoutubejsTestStatus({ testing: true });
+    const start = Date.now();
+    try {
+      const res = await fetch('/api/ytmusic/health');
+      const latencyMs = Date.now() - start;
+      if (res.ok) {
+        const data = await res.json();
+        setYoutubejsTestStatus({ testing: false, result: { ok: true, latencyMs, engine: data.engine, version: data.version } });
+        toast.success(`Connected to ${data.engine} (${latencyMs}ms, v${data.version})`);
+      } else {
+        setYoutubejsTestStatus({ testing: false, result: { ok: false, latencyMs, error: `HTTP ${res.status}` } });
+        toast.error(`Health check failed: HTTP ${res.status}`);
+      }
+    } catch (e: any) {
+      setYoutubejsTestStatus({ testing: false, result: { ok: false, latencyMs: Date.now() - start, error: e?.message } });
+      toast.error(`Health check error: ${e?.message}`);
+    }
+  };
+
+  const handleTestInvidious = async () => {
+    setInvidiousTestStatus({ testing: true });
     const res = await invidiousClient.testInstance(settings.invidiousInstanceUrl);
-    setTestStatus({ testing: false, result: res });
+    setInvidiousTestStatus({ testing: false, result: res });
     if (res.ok) {
       toast.success(`Connected to Invidious (${res.latencyMs}ms, ${res.version})`);
     } else {
       toast.error(`Connection failed: ${res.error}`);
+    }
+  };
+
+  const handleTestYtify = async () => {
+    setYtifyTestStatus({ testing: true });
+    const res = await ytifyClient.testConnection();
+    setYtifyTestStatus({ testing: false, result: res });
+    if (res.ok) {
+      toast.success(`Ytify online (${res.latencyMs}ms)`);
+    } else {
+      toast.error(`Ytify connection failed: ${res.error}`);
     }
   };
 
@@ -927,29 +961,114 @@ function InvidiousAudioSettings() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <span>Audio Stream Source</span>
+            <span>Audio & Search Provider</span>
             <a
-              href="https://docs.invidious.io/api/"
+              href="https://ytjs.dev/api/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[10px] text-primary hover:underline inline-flex items-center gap-0.5"
             >
-              Invidious API Docs <ExternalLink className="w-2.5 h-2.5" />
+              ytjs.dev Docs <ExternalLink className="w-2.5 h-2.5" />
             </a>
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Stream audio via Invidious API (GET /api/v1/videos/:id) with ad-free adaptive audio formats.
+            Powered by YouTube.js (InnerTube API from ytjs.dev) with adaptive audio streams, search, and volume normalization.
           </p>
         </div>
-        <Select<'invidious' | 'native'>
+        <Select<'youtubejs' | 'ytify' | 'invidious' | 'native'>
           value={settings.audioStreamSource}
           options={[
+            { value: 'youtubejs', label: 'YouTube.js (ytjs.dev)' },
+            { value: 'ytify', label: 'Ytify (ytify.pp.ua)' },
             { value: 'invidious', label: 'Invidious API' },
-            { value: 'native', label: 'Native YouTube' },
           ]}
           onChange={(v) => setSetting('audioStreamSource', v)}
         />
       </div>
+
+      {(settings.audioStreamSource === 'youtubejs' || settings.audioStreamSource === 'native') && (
+        <div className="pt-3 border-t border-border/40 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex-1">
+              <label className="text-xs font-medium text-foreground block">YouTube.js Engine Status</label>
+              <p className="text-[11px] text-muted-foreground">Private InnerTube client from ytjs.dev with full cipher deciphering & volume normalization</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono px-2.5 py-1 rounded bg-secondary text-foreground border border-border">
+                youtubei.js v17.0.1
+              </span>
+              <button
+                onClick={handleTestYouTubeJs}
+                disabled={youtubejsTestStatus.testing}
+                className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center gap-1"
+              >
+                {youtubejsTestStatus.testing ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Test'}
+              </button>
+            </div>
+          </div>
+
+          {youtubejsTestStatus.result && (
+            <div className={`text-xs px-3 py-2 rounded-xl ${youtubejsTestStatus.result.ok ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+              {youtubejsTestStatus.result.ok
+                ? `✓ ${youtubejsTestStatus.result.engine} Online: ${youtubejsTestStatus.result.latencyMs}ms response time (v${youtubejsTestStatus.result.version})`
+                : `✗ YouTube.js Unreachable: ${youtubejsTestStatus.result.error}`}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex-1 pr-4">
+              <p className="text-xs font-medium text-foreground">Auto-fallback Continuity</p>
+              <p className="text-[11px] text-muted-foreground">Seamlessly fall back to backup stream extractors if any track format requires alternate decryption</p>
+            </div>
+            <Toggle
+              checked={settings.invidiousFallbackToNative}
+              onChange={(v) => setSetting('invidiousFallbackToNative', v)}
+            />
+          </div>
+        </div>
+      )}
+
+      {settings.audioStreamSource === 'ytify' && (
+        <div className="pt-3 border-t border-border/40 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex-1">
+              <label className="text-xs font-medium text-foreground block">Ytify API Endpoint</label>
+              <p className="text-[11px] text-muted-foreground">Search: https://ytify.pp.ua/?q &bull; Audio Stream: https://ytify.pp.ua/s/:id</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono px-2.5 py-1 rounded bg-secondary text-foreground border border-border">
+                https://ytify.pp.ua/
+              </span>
+              <button
+                onClick={handleTestYtify}
+                disabled={ytifyTestStatus.testing}
+                className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center gap-1"
+              >
+                {ytifyTestStatus.testing ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Test'}
+              </button>
+            </div>
+          </div>
+
+          {ytifyTestStatus.result && (
+            <div className={`text-xs px-3 py-2 rounded-xl ${ytifyTestStatus.result.ok ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+              {ytifyTestStatus.result.ok
+                ? `✓ Ytify Online: ${ytifyTestStatus.result.latencyMs}ms response time (Ready for Search & Streaming)`
+                : `✗ Ytify Connection Failed: ${ytifyTestStatus.result.error}`}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex-1 pr-4">
+              <p className="text-xs font-medium text-foreground">Auto-fallback Continuity</p>
+              <p className="text-[11px] text-muted-foreground">Seamlessly fall back to backup extractor if Ytify stream endpoint experiences any network interruption</p>
+            </div>
+            <Toggle
+              checked={settings.invidiousFallbackToNative}
+              onChange={(v) => setSetting('invidiousFallbackToNative', v)}
+            />
+          </div>
+        </div>
+      )}
 
       {settings.audioStreamSource === 'invidious' && (
         <div className="pt-3 border-t border-border/40 space-y-3">
@@ -967,20 +1086,20 @@ function InvidiousAudioSettings() {
                 className="bg-secondary text-foreground text-xs rounded-lg px-3 py-1.5 outline-none border border-border w-56 focus:ring-1 focus:ring-primary/20"
               />
               <button
-                onClick={handleTest}
-                disabled={testStatus.testing}
+                onClick={handleTestInvidious}
+                disabled={invidiousTestStatus.testing}
                 className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center gap-1"
               >
-                {testStatus.testing ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Test'}
+                {invidiousTestStatus.testing ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Test'}
               </button>
             </div>
           </div>
 
-          {testStatus.result && (
-            <div className={`text-xs px-3 py-2 rounded-xl ${testStatus.result.ok ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-              {testStatus.result.ok
-                ? `✓ Instance Online: ${testStatus.result.latencyMs}ms response time (${testStatus.result.version})`
-                : `✗ Instance Unreachable: ${testStatus.result.error}`}
+          {invidiousTestStatus.result && (
+            <div className={`text-xs px-3 py-2 rounded-xl ${invidiousTestStatus.result.ok ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+              {invidiousTestStatus.result.ok
+                ? `✓ Instance Online: ${invidiousTestStatus.result.latencyMs}ms response time (${invidiousTestStatus.result.version})`
+                : `✗ Instance Unreachable: ${invidiousTestStatus.result.error}`}
             </div>
           )}
 

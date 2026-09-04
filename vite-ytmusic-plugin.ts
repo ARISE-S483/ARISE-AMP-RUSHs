@@ -196,6 +196,16 @@ export function ytmusicPlugin(): Plugin {
         if (!yt) return sendError(res, 'youtubei.js not initialized', 503);
 
         switch (endpoint) {
+          case 'health': {
+            return sendJSON(res, {
+              ok: true,
+              engine: 'YouTube.js (InnerTube)',
+              docs: 'https://ytjs.dev/api/',
+              version: '17.0.1',
+              timestamp: Date.now(),
+            });
+          }
+
           case 'search': {
             const query = (url.searchParams.get('q') || '').trim();
             if (!query) return sendError(res, 'Missing query parameter "q"', 400);
@@ -464,6 +474,99 @@ export function ytmusicPlugin(): Plugin {
             }
           }
 
+          case 'ytify': {
+            const sub = pathParts[1];
+            if (sub === 'search') {
+              const query = (url.searchParams.get('q') || '').trim();
+              const filter = (url.searchParams.get('f') || 'song').trim();
+              if (!query) return sendError(res, 'Missing q query parameter', 400);
+
+              try {
+                const searchRes = await fetch(`https://api.ytify.workers.dev/search?q=${encodeURIComponent(query)}&f=${encodeURIComponent(filter)}`, {
+                  headers: {
+                    'Accept': 'application/json',
+                    'Origin': 'https://ytify.pp.ua',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                  },
+                  signal: AbortSignal.timeout(8000),
+                });
+                if (searchRes.ok) {
+                  const json = await searchRes.json();
+                  return sendJSON(res, json);
+                }
+                return sendError(res, `Ytify search failed: ${searchRes.statusText}`, searchRes.status);
+              } catch (e: any) {
+                return sendError(res, e?.message || 'Ytify search failed', 500);
+              }
+            }
+
+            if (sub === 'suggestions') {
+              const query = (url.searchParams.get('q') || '').trim();
+              if (!query) return sendJSON(res, []);
+              try {
+                const sugRes = await fetch(`https://api.ytify.workers.dev/search-suggestions?q=${encodeURIComponent(query)}&music=true`, {
+                  headers: {
+                    'Accept': 'application/json',
+                    'Origin': 'https://ytify.pp.ua',
+                  },
+                  signal: AbortSignal.timeout(4000),
+                });
+                if (sugRes.ok) {
+                  const json = await sugRes.json();
+                  return sendJSON(res, json);
+                }
+                return sendJSON(res, []);
+              } catch {
+                return sendJSON(res, []);
+              }
+            }
+
+            if (sub === 'stream') {
+              const videoId = pathParts[2] || url.searchParams.get('videoId') || url.searchParams.get('id');
+              if (!videoId) return sendError(res, 'Missing videoId', 400);
+
+              try {
+                const streamRes = await fetch(`https://ytify.pp.ua/s/${encodeURIComponent(videoId)}`, {
+                  headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                  },
+                  signal: AbortSignal.timeout(8000),
+                });
+
+                if (streamRes.ok) {
+                  const data: any = await streamRes.json();
+                  const formats = data.adaptiveFormats || [];
+                  const audioFormats = formats.filter((f: any) => {
+                    const type = (f.mimeType || f.type || '').toLowerCase();
+                    return type.startsWith('audio/') || f.itag === 140 || f.itag === 251 || f.itag === 250;
+                  });
+
+                  if (audioFormats.length > 0) {
+                    audioFormats.sort((a: any, b: any) => (Number(b.bitrate) || 0) - (Number(a.bitrate) || 0));
+                    const best = audioFormats[0];
+                    const directUrl = best.url;
+                    const proxiedUrl = `/api/ytmusic/proxy?url=${encodeURIComponent(directUrl)}`;
+                    return sendJSON(res, {
+                      url: proxiedUrl,
+                      directUrl,
+                      mimeType: best.mimeType || best.type || 'audio/webm',
+                      bitrate: Number(best.bitrate) || 160000,
+                      loudnessDb: 0,
+                      source: 'ytify',
+                      instance: 'https://ytify.pp.ua',
+                    });
+                  }
+                }
+                return sendError(res, 'No audio streams returned by Ytify', 502);
+              } catch (err: any) {
+                return sendError(res, err?.message || 'Ytify stream fetch failed', 500);
+              }
+            }
+
+            return sendError(res, 'Unknown ytify sub-endpoint', 404);
+          }
+
           case 'invidious': {
             let videoId = url.searchParams.get('videoId') || url.searchParams.get('id');
             if (!videoId) {
@@ -665,67 +768,78 @@ export function ytmusicPlugin(): Plugin {
             try {
               const https = await import('https');
               const http = await import('http');
-              const mod = urlQuery.startsWith('https') ? https : http;
 
-              const proxyReq = mod.get(urlQuery, {
-                headers: {
-                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                  'Range': req.headers['range'] || 'bytes=0-',
-                }
-              }, (proxyRes) => {
-                console.log('[PROXY GOOGLEVIDEO RES]', proxyRes.statusCode, proxyRes.headers['content-range'] || proxyRes.headers['content-length']);
-                if (proxyRes.statusCode) res.statusCode = proxyRes.statusCode;
-                
-                // Copy all headers securely
-                Object.keys(proxyRes.headers).forEach((key) => {
-                  try {
-                    res.setHeader(key, proxyRes.headers[key]!);
-                  } catch (e) { /* ignore restricted headers */ }
+              const followRedirectAndStream = (targetUrl: string, maxRedirects = 5) => {
+                const targetObj = new URL(targetUrl);
+                const mod = targetObj.protocol === 'https:' ? https : http;
+
+                const proxyReq: any = mod.get(targetUrl, {
+                  headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Range': req.headers['range'] || 'bytes=0-',
+                  }
+                }, (proxyRes) => {
+                  if (proxyRes.statusCode && proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location && maxRedirects > 0) {
+                    proxyRes.resume();
+                    const nextUrl = new URL(proxyRes.headers.location, targetUrl).toString();
+                    return followRedirectAndStream(nextUrl, maxRedirects - 1);
+                  }
+
+                  console.log('[PROXY GOOGLEVIDEO RES]', proxyRes.statusCode, proxyRes.headers['content-range'] || proxyRes.headers['content-length']);
+                  if (proxyRes.statusCode) res.statusCode = proxyRes.statusCode;
+                  
+                  // Copy all headers securely
+                  Object.keys(proxyRes.headers).forEach((key) => {
+                    try {
+                      res.setHeader(key, proxyRes.headers[key]!);
+                    } catch (e) { /* ignore restricted headers */ }
+                  });
+
+                  // Enforce CORS for Web Audio API
+                  res.setHeader('Access-Control-Allow-Origin', '*');
+                  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+                  res.setHeader('Access-Control-Allow-Headers', '*');
+                  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+                  proxyRes.pipe(res);
+
+                  res.on('error', (err: any) => {
+                    if (err?.code !== 'ECONNRESET') {
+                      console.error('[proxy res err]', err?.message);
+                    }
+                    proxyReq.destroy();
+                  });
+
+                  proxyRes.on('error', (err: any) => {
+                    if (err?.code !== 'ECONNRESET' && err?.message !== 'aborted') {
+                      console.error('[proxy stream err]', err?.message);
+                    }
+                    res.end();
+                  });
                 });
 
-                // Enforce CORS for Web Audio API
-                res.setHeader('Access-Control-Allow-Origin', '*');
-                res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-                res.setHeader('Access-Control-Allow-Headers', '*');
-                res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+                proxyReq.on('error', (err: any) => {
+                  if (err?.code !== 'ECONNRESET' && err?.message !== 'aborted') {
+                    console.error('[proxy req err]', err?.message);
+                  }
+                  if (!res.headersSent) {
+                    return sendError(res, `Proxy request failed: ${err.message}`, 500);
+                  }
+                });
 
-                proxyRes.pipe(res);
-
-                res.on('error', (err: any) => {
+                req.on('close', () => {
+                  proxyReq.destroy();
+                });
+                
+                req.on('error', (err: any) => {
                   if (err?.code !== 'ECONNRESET') {
-                    console.error('[proxy res err]', err?.message);
+                    console.warn('[proxy req close err]', err?.message);
                   }
                   proxyReq.destroy();
                 });
+              };
 
-                proxyRes.on('error', (err: any) => {
-                  if (err?.code !== 'ECONNRESET' && err?.message !== 'aborted') {
-                    console.error('[proxy stream err]', err?.message);
-                  }
-                  res.end();
-                });
-              });
-
-              proxyReq.on('error', (err: any) => {
-                if (err?.code !== 'ECONNRESET' && err?.message !== 'aborted') {
-                  console.error('[proxy req err]', err?.message);
-                }
-                if (!res.headersSent) {
-                  return sendError(res, `Proxy request failed: ${err.message}`, 500);
-                }
-              });
-
-              req.on('close', () => {
-                proxyReq.destroy();
-              });
-              
-              req.on('error', (err: any) => {
-                if (err?.code !== 'ECONNRESET') {
-                  console.warn('[proxy req close err]', err?.message);
-                }
-                proxyReq.destroy();
-              });
-
+              followRedirectAndStream(urlQuery);
               return;
             } catch (err: any) {
               return sendError(res, err.message, 500);

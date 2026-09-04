@@ -4,6 +4,7 @@
 import type { Track, Artist, Album, Playlist, SearchResults, Lyrics } from './types';
 import { ytmusicClient } from './ytmusicClient';
 import { invidiousClient } from './invidiousClient';
+import { ytifyClient } from './ytifyClient';
 import { useSettingsStore } from '@/stores/settingsStore';
 
 // ========== Deduplication ==========
@@ -24,22 +25,43 @@ export function normalizeTitle(s?: string): string {
 
 class MusicAPI {
 
-  // ===== Search =====
+  // ===== Search (YouTube.js / ytjs.dev InnerTube primary) =====
   async search(query: string, signal?: AbortSignal): Promise<SearchResults> {
     try {
-      return await ytmusicClient.search(query, signal);
-    } catch (e) {
-      console.error('[musicAPI] Search failed:', e);
-      return { tracks: [], albums: [], artists: [], playlists: [], videos: [] };
+      const ytmusicRes = await ytmusicClient.search(query, signal);
+      if (ytmusicRes && (ytmusicRes.tracks.length > 0 || ytmusicRes.artists.length > 0 || ytmusicRes.albums.length > 0)) {
+        return ytmusicRes;
+      }
+    } catch (err) {
+      console.warn('[musicAPI] YouTube.js search failed, falling back:', err);
     }
+
+    try {
+      const ytifyRes = await ytifyClient.search(query, 'song', signal);
+      if (ytifyRes && ytifyRes.tracks.length > 0) {
+        return ytifyRes;
+      }
+    } catch {}
+
+    return { tracks: [], albums: [], artists: [], playlists: [], videos: [] };
   }
 
   async searchTracks(query: string, signal?: AbortSignal): Promise<Track[]> {
     try {
-      return await ytmusicClient.searchSongs(query, signal);
-    } catch {
-      return [];
-    }
+      const tracks = await ytmusicClient.searchSongs(query, signal);
+      if (tracks && tracks.length > 0) {
+        return tracks;
+      }
+    } catch {}
+
+    try {
+      const ytifyRes = await ytifyClient.search(query, 'song', signal);
+      if (ytifyRes && ytifyRes.tracks.length > 0) {
+        return ytifyRes.tracks;
+      }
+    } catch {}
+
+    return [];
   }
 
   async searchArtists(query: string, signal?: AbortSignal): Promise<Artist[]> {
@@ -66,9 +88,19 @@ class MusicAPI {
     }
   }
 
-  // ===== Suggestions =====
+  // ===== Suggestions (YouTube.js / ytjs.dev primary) =====
   async getSuggestions(query: string): Promise<string[]> {
-    return ytmusicClient.getSuggestions(query);
+    try {
+      const s = await ytmusicClient.getSuggestions(query);
+      if (s && s.length > 0) return s;
+    } catch {}
+
+    try {
+      const ys = await ytifyClient.getSuggestions(query);
+      if (ys && ys.length > 0) return ys;
+    } catch {}
+
+    return [];
   }
 
   // ===== Get Track =====
@@ -92,7 +124,7 @@ class MusicAPI {
     return ytmusicClient.getPlaylist(id);
   }
 
-  // ===== Streaming =====
+  // ===== Streaming (YouTube.js / ytjs.dev primary) =====
   async getStreamDetails(track: Track): Promise<{ url: string; mimeType: string; bitrate: number; loudnessDb: number } | null> {
     if (track.streamUrl) {
       return { url: track.streamUrl, mimeType: 'audio/webm', bitrate: 128000, loudnessDb: track.loudnessDb || 0 };
@@ -100,6 +132,42 @@ class MusicAPI {
 
     const { audioStreamSource, invidiousFallbackToNative } = useSettingsStore.getState();
 
+    // 1. Primary: YouTube.js (InnerTube / ytjs.dev)
+    if (audioStreamSource === 'youtubejs' || audioStreamSource === 'native' || !audioStreamSource) {
+      try {
+        const details = await ytmusicClient.getStreamDetails(track);
+        if (details && details.url) {
+          return details;
+        }
+      } catch (err) {
+        console.warn('[musicAPI] YouTube.js stream extraction failed:', err);
+      }
+
+      // Backup extractor: Ytify
+      try {
+        const ytifyDetails = await ytifyClient.getStreamDetails(track);
+        if (ytifyDetails && ytifyDetails.url) {
+          return ytifyDetails;
+        }
+      } catch {}
+
+      return null;
+    }
+
+    // 2. Ytify Provider
+    if (audioStreamSource === 'ytify') {
+      try {
+        const ytifyDetails = await ytifyClient.getStreamDetails(track);
+        if (ytifyDetails && ytifyDetails.url) {
+          return ytifyDetails;
+        }
+      } catch (err) {
+        console.warn('[musicAPI] Ytify stream extraction failed:', err);
+      }
+      return ytmusicClient.getStreamDetails(track);
+    }
+
+    // 3. Invidious Provider
     if (audioStreamSource === 'invidious') {
       try {
         const invDetails = await invidiousClient.getStreamDetails(track);
@@ -113,7 +181,7 @@ class MusicAPI {
       if (!invidiousFallbackToNative) {
         return null;
       }
-      console.log('[musicAPI] Falling back to native stream extractor');
+      return ytmusicClient.getStreamDetails(track);
     }
 
     return ytmusicClient.getStreamDetails(track);

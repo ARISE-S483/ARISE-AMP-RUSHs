@@ -8,7 +8,8 @@ export type BackgroundImage = 'blue-mountains' | 'cosmic-purple' | 'dark-forest'
 
 interface SettingsState {
   // Audio
-  audioStreamSource: 'invidious' | 'native';
+  audioStreamSource: 'youtubejs' | 'ytify' | 'invidious' | 'native';
+  ytifyInstanceUrl: string;
   invidiousInstanceUrl: string;
   invidiousFallbackToNative: boolean;
   audioQuality: string;
@@ -97,7 +98,8 @@ interface SettingsState {
 const STORAGE_KEY = 'melodies_settings';
 
 const defaultSettings = {
-  audioStreamSource: 'invidious' as 'invidious' | 'native',
+  audioStreamSource: 'youtubejs' as 'youtubejs' | 'ytify' | 'invidious' | 'native',
+  ytifyInstanceUrl: 'https://ytify.pp.ua',
   invidiousInstanceUrl: 'https://inv.nadeko.net',
   invidiousFallbackToNative: true,
   audioQuality: 'AUTO',
@@ -167,7 +169,11 @@ function loadSettings(): typeof defaultSettings {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return { ...defaultSettings, ...JSON.parse(stored) };
+      const parsed = JSON.parse(stored);
+      if (!parsed.audioStreamSource || parsed.audioStreamSource === 'native') {
+        parsed.audioStreamSource = 'youtubejs';
+      }
+      return { ...defaultSettings, ...parsed };
     }
   } catch { /* */ }
   return { ...defaultSettings };
