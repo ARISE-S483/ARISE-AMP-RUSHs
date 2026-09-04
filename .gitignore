@@ -25,3 +25,5 @@ dist-ssr
 
 _tmp_beatbump
 monochrome_clone
+.vercel
+.env*
