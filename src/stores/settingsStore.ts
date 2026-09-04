@@ -98,7 +98,7 @@ interface SettingsState {
 const STORAGE_KEY = 'melodies_settings';
 
 const defaultSettings = {
-  audioStreamSource: 'youtubejs' as 'youtubejs' | 'ytify' | 'invidious' | 'native',
+  audioStreamSource: 'ytify' as 'youtubejs' | 'ytify' | 'invidious' | 'native',
   ytifyInstanceUrl: 'https://ytify.pp.ua',
   invidiousInstanceUrl: 'https://inv.nadeko.net',
   invidiousFallbackToNative: true,
@@ -170,8 +170,8 @@ function loadSettings(): typeof defaultSettings {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (!parsed.audioStreamSource || parsed.audioStreamSource === 'native') {
-        parsed.audioStreamSource = 'youtubejs';
+      if (!parsed.audioStreamSource || parsed.audioStreamSource === 'native' || parsed.audioStreamSource === 'invidious') {
+        parsed.audioStreamSource = 'ytify';
       }
       return { ...defaultSettings, ...parsed };
     }

@@ -978,8 +978,8 @@ function AudioStreamSourceSettings() {
         <Select<'youtubejs' | 'ytify' | 'invidious' | 'native'>
           value={settings.audioStreamSource}
           options={[
+            { value: 'ytify', label: 'Ytify (yt.omada.cafe / n-ce/ytify) — Recommended' },
             { value: 'youtubejs', label: 'YouTube.js (ytjs.dev)' },
-            { value: 'ytify', label: 'Ytify (ytify.pp.ua)' },
             { value: 'invidious', label: 'Invidious API' },
           ]}
           onChange={(v) => setSetting('audioStreamSource', v)}

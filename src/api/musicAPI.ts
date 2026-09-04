@@ -124,50 +124,15 @@ class MusicAPI {
     return ytmusicClient.getPlaylist(id);
   }
 
-  // ===== Streaming (YouTube.js / ytjs.dev primary) =====
+  // ===== Streaming (Ytify / yt.omada.cafe primary matching n-ce/ytify) =====
   async getStreamDetails(track: Track): Promise<{ url: string; mimeType: string; bitrate: number; loudnessDb: number } | null> {
     if (track.streamUrl) {
       return { url: track.streamUrl, mimeType: 'audio/webm', bitrate: 128000, loudnessDb: track.loudnessDb || 0 };
     }
 
-    const { audioStreamSource, invidiousFallbackToNative } = useSettingsStore.getState();
+    const { audioStreamSource } = useSettingsStore.getState();
 
-    // 1. Primary: YouTube.js (InnerTube / ytjs.dev)
-    if (audioStreamSource === 'youtubejs' || audioStreamSource === 'native' || !audioStreamSource) {
-      try {
-        const details = await ytmusicClient.getStreamDetails(track);
-        if (details && details.url) {
-          return details;
-        }
-      } catch (err) {
-        console.warn('[musicAPI] YouTube.js stream extraction failed:', err);
-      }
-
-      // Backup extractor: Ytify
-      try {
-        const ytifyDetails = await ytifyClient.getStreamDetails(track);
-        if (ytifyDetails && ytifyDetails.url) {
-          return ytifyDetails;
-        }
-      } catch {}
-
-      return null;
-    }
-
-    // 2. Ytify Provider
-    if (audioStreamSource === 'ytify') {
-      try {
-        const ytifyDetails = await ytifyClient.getStreamDetails(track);
-        if (ytifyDetails && ytifyDetails.url) {
-          return ytifyDetails;
-        }
-      } catch (err) {
-        console.warn('[musicAPI] Ytify stream extraction failed:', err);
-      }
-      return ytmusicClient.getStreamDetails(track);
-    }
-
-    // 3. Invidious Provider
+    // If user explicitly chose Invidious
     if (audioStreamSource === 'invidious') {
       try {
         const invDetails = await invidiousClient.getStreamDetails(track);
@@ -177,14 +142,35 @@ class MusicAPI {
       } catch (err) {
         console.warn('[musicAPI] Invidious stream extraction failed:', err);
       }
-
-      if (!invidiousFallbackToNative) {
-        return null;
-      }
-      return ytmusicClient.getStreamDetails(track);
     }
 
-    return ytmusicClient.getStreamDetails(track);
+    // 1. Primary: Ytify (n-ce/ytify architecture with direct https://yt.omada.cafe/videoplayback?...)
+    try {
+      const ytifyDetails = await ytifyClient.getStreamDetails(track);
+      if (ytifyDetails && ytifyDetails.url) {
+        return ytifyDetails;
+      }
+    } catch (err) {
+      console.warn('[musicAPI] Ytify stream extraction failed:', err);
+    }
+
+    // 2. Invidious direct fallback
+    try {
+      const invDetails = await invidiousClient.getStreamDetails(track);
+      if (invDetails && invDetails.url) {
+        return invDetails;
+      }
+    } catch {}
+
+    // 3. YouTube.js backend fallback
+    try {
+      const details = await ytmusicClient.getStreamDetails(track);
+      if (details && details.url) {
+        return details;
+      }
+    } catch {}
+
+    return null;
   }
 
   async getStreamUrl(track: Track, quality: string = 'HIGH'): Promise<string | null> {

@@ -1,6 +1,6 @@
-// Ytify Client — search and audio streaming via https://ytify.pp.ua/
-// Search: https://api.ytify.workers.dev/search?q={query}&f=song
-// Audio Stream: https://ytify.pp.ua/s/{videoId} (Accept: application/json)
+// Ytify Client — implementation matching https://github.com/n-ce/ytify
+// Audio streaming: direct extraction from https://yt.omada.cafe / invidious instances with proxyHandler
+// Audio request in Network Tab: https://yt.omada.cafe/videoplayback?expire=...&itag=251...
 
 import type { Track, SearchResults } from './types';
 
@@ -42,6 +42,27 @@ export interface StreamDetails {
   loudnessDb: number;
   source: 'ytify' | 'invidious' | 'native';
   instance?: string;
+}
+
+// Instances matching n-ce/ytify src/lib/modules/getStreamData.ts
+export const YTIFY_INSTANCES = [
+  'https://yt.omada.cafe',
+  'https://invidious.schenkel.eti.br',
+  'https://invidious.kemonomimi.nl',
+  'https://inv.nadeko.net',
+  'https://ytify.pp.ua'
+];
+
+// proxyHandler matching n-ce/ytify src/lib/utils/helpers.ts
+export function proxyHandler(url: string, proxy?: string): string {
+  try {
+    const link = new URL(url);
+    const origin = link.origin;
+    const targetProxy = proxy || 'https://yt.omada.cafe';
+    return !url.includes('&fallback') ? url.replace(origin, targetProxy) : url;
+  } catch {
+    return url;
+  }
 }
 
 function parseDurationString(d?: string): number {
@@ -88,7 +109,7 @@ class YtifyClient {
     if (!query.trim()) return { tracks: [], albums: [], artists: [], playlists: [], videos: [] };
 
     try {
-      // First try local proxy endpoint to bypass any browser CORS
+      // 1. First try local proxy endpoint to bypass any browser CORS
       let rawData: YtifySearchItem[] | null = null;
       try {
         const localRes = await fetch(`/api/ytmusic/ytify/search?q=${encodeURIComponent(query)}&f=${encodeURIComponent(filter)}`, {
@@ -98,19 +119,48 @@ class YtifyClient {
           rawData = await localRes.json();
         }
       } catch {
-        // Fallback to direct worker fetch
+        // Fallback
       }
 
+      // 2. Direct fetch to Ytify Worker
       if (!rawData) {
-        const directRes = await fetch(`${this.apiBase}/search?q=${encodeURIComponent(query)}&f=${encodeURIComponent(filter)}`, {
-          headers: {
-            'Accept': 'application/json',
-            'Origin': 'https://ytify.pp.ua',
-          },
-          signal: signal || AbortSignal.timeout(6000),
-        });
-        if (directRes.ok) {
-          rawData = await directRes.json();
+        try {
+          const directRes = await fetch(`${this.apiBase}/search?q=${encodeURIComponent(query)}&f=${encodeURIComponent(filter)}`, {
+            headers: {
+              'Accept': 'application/json',
+              'Origin': 'https://ytify.pp.ua',
+            },
+            signal: signal || AbortSignal.timeout(6000),
+          });
+          if (directRes.ok) {
+            rawData = await directRes.json();
+          }
+        } catch {
+          // Fallback
+        }
+      }
+
+      // 3. Direct fetch to yt.omada.cafe search endpoint
+      if (!rawData) {
+        try {
+          const omadaRes = await fetch(`https://yt.omada.cafe/api/v1/search?q=${encodeURIComponent(query)}`, {
+            headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+            signal: signal || AbortSignal.timeout(6000),
+          });
+          if (omadaRes.ok) {
+            const omadaJson: any = await omadaRes.json();
+            if (Array.isArray(omadaJson)) {
+              rawData = omadaJson.map((item: any) => ({
+                id: item.videoId || item.id,
+                title: item.title,
+                author: item.author || '',
+                duration: item.lengthSeconds ? `${Math.floor(item.lengthSeconds / 60)}:${item.lengthSeconds % 60}` : '',
+                img: item.videoThumbnails?.[0]?.url,
+              }));
+            }
+          }
+        } catch {
+          // Fallback
         }
       }
 
@@ -160,71 +210,66 @@ class YtifyClient {
     return [];
   }
 
-  // Audio Stream via https://ytify.pp.ua/s/:id
+  // Audio Stream via n-ce/ytify architecture (direct https://yt.omada.cafe/videoplayback?... playback)
   async getStreamDetails(track: Track): Promise<StreamDetails | null> {
     const videoId = track.videoId || (typeof track.id === 'string' ? track.id.replace('YT:', '') : String(track.id));
     if (!videoId) return null;
 
-    try {
-      // 1. Try local server-side Ytify endpoint first
+    // Probe instances in order matching n-ce/ytify
+    for (const proxy of YTIFY_INSTANCES) {
       try {
-        const localRes = await fetch(`/api/ytmusic/ytify/stream/${encodeURIComponent(videoId)}`, {
-          signal: AbortSignal.timeout(6000),
+        const isYtify = proxy === 'https://ytify.pp.ua';
+        const url = isYtify
+          ? `${proxy}/s/${encodeURIComponent(videoId)}`
+          : `${proxy}/api/v1/videos/${encodeURIComponent(videoId)}`;
+
+        const res = await fetch(url, {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          },
+          signal: AbortSignal.timeout(5000),
         });
-        if (localRes.ok) {
-          const data = await localRes.json();
-          if (data && data.url) {
-            return {
-              url: data.url,
-              directUrl: data.directUrl || data.url,
-              mimeType: data.mimeType || 'audio/webm',
-              bitrate: data.bitrate || 160000,
-              loudnessDb: 0,
-              source: 'ytify',
-              instance: 'https://ytify.pp.ua',
-            };
-          }
-        }
-      } catch {
-        // Fallback
-      }
 
-      // 2. Direct fetch from https://ytify.pp.ua/s/:id with Accept: application/json
-      const res = await fetch(`${this.streamBase}/s/${encodeURIComponent(videoId)}`, {
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-        },
-        signal: AbortSignal.timeout(6000),
-      });
+        if (!res.ok) continue;
 
-      if (res.ok) {
-        const data: YtifyStreamResponse = await res.json();
-        const formats = data.adaptiveFormats || [];
+        const data: any = await res.json();
+        const formats: YtifyStreamFormat[] = data.adaptiveFormats || data.formatStreams || [];
+
         const audioFormats = formats.filter(f => {
+          if (!f || !f.url) return false;
           const type = (f.mimeType || f.type || '').toLowerCase();
           return type.startsWith('audio/') || f.itag === 140 || f.itag === 251 || f.itag === 250;
         });
 
-        if (audioFormats.length > 0) {
-          audioFormats.sort((a, b) => (Number(b.bitrate) || 0) - (Number(a.bitrate) || 0));
-          const best = audioFormats[0];
-          const directUrl = best.url;
-          const proxiedUrl = `/api/ytmusic/proxy?url=${encodeURIComponent(directUrl)}`;
+        if (audioFormats.length === 0) continue;
 
-          return {
-            url: proxiedUrl,
-            directUrl,
-            mimeType: best.mimeType || best.type || 'audio/webm',
-            bitrate: Number(best.bitrate) || 160000,
-            loudnessDb: 0,
-            source: 'ytify',
-            instance: 'https://ytify.pp.ua',
-          };
-        }
+        // Preferred stream selection matching ytify (itag 251 Opus 160k, then itag 140 AAC 128k)
+        audioFormats.sort((a, b) => {
+          if (a.itag === 251) return -1;
+          if (b.itag === 251) return 1;
+          if (a.itag === 140) return -1;
+          if (b.itag === 140) return 1;
+          return (Number(b.bitrate) || 0) - (Number(a.bitrate) || 0);
+        });
+
+        const best = audioFormats[0];
+        // Apply ytify proxyHandler: replaces googlevideo origin with proxy origin (e.g. https://yt.omada.cafe)
+        const targetProxy = isYtify ? 'https://yt.omada.cafe' : proxy;
+        const streamUrl = proxyHandler(best.url, targetProxy);
+
+        return {
+          url: streamUrl,
+          directUrl: streamUrl,
+          mimeType: best.mimeType || best.type || 'audio/webm',
+          bitrate: Number(best.bitrate) || 160000,
+          loudnessDb: 0,
+          source: 'ytify',
+          instance: targetProxy,
+        };
+      } catch {
+        // Continue to next instance
       }
-    } catch (err) {
-      console.warn('[ytify] getStreamDetails error:', err);
     }
 
     return null;
@@ -234,8 +279,8 @@ class YtifyClient {
   async testConnection(): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
     const start = Date.now();
     try {
-      // Test with well-known ID via local proxy or direct
-      const res = await fetch(`/api/ytmusic/ytify/stream/dQw4w9WgXcQ`, {
+      const res = await fetch('https://yt.omada.cafe/api/v1/videos/dQw4w9WgXcQ', {
+        headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' },
         signal: AbortSignal.timeout(6000),
       }).catch(() => fetch(`${this.streamBase}/s/dQw4w9WgXcQ`, {
         headers: { 'Accept': 'application/json' },
