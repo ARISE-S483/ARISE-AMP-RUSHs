@@ -1,8 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, X, Command, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, X, Command, ChevronLeft, ChevronRight, Minimize2 } from 'lucide-react';
 import { musicAPI } from '@/api/musicAPI';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePlayerStore } from '@/stores/playerStore';
+import { LastFmButton } from './LastFmButton';
+import { AccountMenu } from './AccountMenu';
 
 export function TopBar() {
   const [searchParams] = useSearchParams();
@@ -10,6 +13,8 @@ export function TopBar() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const isMiniPlayerOpen = usePlayerStore(s => s.isMiniPlayerOpen);
+  const toggleMiniPlayer = usePlayerStore(s => s.toggleMiniPlayer);
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -129,6 +134,21 @@ export function TopBar() {
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
+      {/* Right controls: Mini Player, Last.fm scrobbler, YouTube Music Account */}
+      <div className="ml-auto flex items-center gap-2">
+        <button
+          onClick={toggleMiniPlayer}
+          className={`w-7 h-7 rounded-full glass-subtle flex items-center justify-center transition-all border border-border/30 ${
+            isMiniPlayerOpen ? 'text-primary bg-primary/15 border-primary/40 shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-accent/40'
+          }`}
+          title={isMiniPlayerOpen ? 'Close Mini Player' : 'Open Mini Player'}
+        >
+          <Minimize2 size={13} />
+        </button>
+        <LastFmButton />
+        <AccountMenu />
       </div>
     </div>
   );

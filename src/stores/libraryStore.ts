@@ -8,6 +8,7 @@ interface LibraryState {
   favorites: Track[];
   recentlyPlayed: Track[];
   playlists: Playlist[];
+  localTracks: Track[];
   isLoaded: boolean;
   addToFavorites: (track: Track) => void;
   removeFromFavorites: (trackId: string) => void;
@@ -18,6 +19,9 @@ interface LibraryState {
   renamePlaylist: (id: string, name: string) => void;
   addToPlaylist: (playlistId: string, track: Track) => void;
   removeFromPlaylist: (playlistId: string, trackId: string) => void;
+  addLocalTracks: (tracks: Track[]) => void;
+  removeLocalTrack: (trackId: string) => void;
+  clearLocalTracks: () => void;
 }
 
 function saveToStorage(key: string, data: unknown) {
@@ -40,6 +44,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   favorites: [],
   recentlyPlayed: [],
   playlists: [],
+  localTracks: [],
   isLoaded: false,
 
   addToFavorites: (track) => {
@@ -113,6 +118,27 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     set({ playlists: updated });
     saveToStorage('melodies_playlists', updated);
   },
+
+  addLocalTracks: (newTracks) => {
+    const { localTracks } = get();
+    // Deduplicate by title + artist
+    const existing = new Set(localTracks.map(t => `${t.title}_${t.artist.name}`));
+    const toAdd = newTracks.filter(t => !existing.has(`${t.title}_${t.artist.name}`));
+    const updated = [...localTracks, ...toAdd];
+    set({ localTracks: updated });
+    saveToStorage('melodies_local_tracks', updated);
+  },
+
+  removeLocalTrack: (trackId) => {
+    const updated = get().localTracks.filter(t => String(t.id) !== trackId);
+    set({ localTracks: updated });
+    saveToStorage('melodies_local_tracks', updated);
+  },
+
+  clearLocalTracks: () => {
+    set({ localTracks: [] });
+    saveToStorage('melodies_local_tracks', []);
+  },
 }));
 
 export function addToRecentlyPlayed(track: Track) {
@@ -121,7 +147,7 @@ export function addToRecentlyPlayed(track: Track) {
 
 // Initialize and migrate data from localStorage to IndexedDB
 async function initStore() {
-  const keys = ['melodies_favorites', 'melodies_recent', 'melodies_playlists'];
+  const keys = ['melodies_favorites', 'melodies_recent', 'melodies_playlists', 'melodies_local_tracks'];
   const state: any = {};
   
   for (const key of keys) {
@@ -146,6 +172,7 @@ async function initStore() {
     favorites: state.melodies_favorites,
     recentlyPlayed: state.melodies_recent,
     playlists: state.melodies_playlists,
+    localTracks: state.melodies_local_tracks,
     isLoaded: true
   });
 }

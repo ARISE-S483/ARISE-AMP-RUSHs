@@ -7,6 +7,7 @@ import { MobileNav } from './MobileNav';
 import { PlayerBar } from '../player/PlayerBar';
 import { QueuePanel } from '../player/QueuePanel';
 import { LyricsPanel } from '../player/LyricsPanel';
+import { MiniPlayer } from '../player/MiniPlayer';
 import { AudioEngine } from '../player/AudioEngine';
 import { usePlayerStore } from '@/stores/playerStore';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -162,6 +163,9 @@ export function Layout() {
 
       {/* Floating player outside glass panel (z-[55]) */}
       <PlayerBar />
+
+      {/* Floating draggable Mini Player (z-[80]) */}
+      <MiniPlayer />
 
       {/* Search overlay (z-50) */}
       <SearchOverlay open={searchOpen} onClose={handleSearchClose} />

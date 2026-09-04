@@ -21,10 +21,11 @@ export interface Track {
   thumbnail?: string;
   thumbnailLarge?: string;
   // Multi-source fields
-  source?: 'tidal' | 'piped' | 'youtube' | 'jiosaavn' | 'local' | 'rapidapi' | 'shazam' | 'spotify' | 'genius' | 'deezer' | 'subsonic';
-  videoId?: string;        // YouTube video ID (Piped source)
+  source?: 'youtube' | 'local' | 'ytmusic';
+  videoId?: string;        // YouTube video ID (YouTube Music source)
   streamUrl?: string;      // Direct stream URL (when pre-resolved)
-  previewUrl?: string;     // 30s preview URL (Spotify, Deezer)
+  previewUrl?: string;     // 30s preview URL
+  loudnessDb?: number;     // Loudness relative to YouTube -14 LUFS target (for normalization)
 }
 
 export interface Album {

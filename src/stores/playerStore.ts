@@ -24,6 +24,7 @@ interface PlayerState {
   repeatMode: RepeatMode;
   isQueueOpen: boolean;
   isLyricsOpen: boolean;
+  isMiniPlayerOpen: boolean;
   isVisualizerActive: boolean;
   isLoading: boolean;
   audioElement: HTMLAudioElement | null;
@@ -60,6 +61,8 @@ interface PlayerState {
   setDuration: (dur: number) => void;
   toggleQueue: () => void;
   toggleLyrics: () => void;
+  toggleMiniPlayer: () => void;
+  setMiniPlayerOpen: (open: boolean) => void;
   toggleVisualizer: () => void;
   // Radio
   enableRadio: (seeds?: Track[]) => void;
@@ -100,6 +103,10 @@ function waitForCanPlay(audio: HTMLAudioElement, timeoutMs = 8000): Promise<void
 
 async function safePlay(audio: HTMLAudioElement): Promise<void> {
   try {
+    const store = usePlayerStore.getState();
+    if (store.audioContext && store.audioContext.state === 'suspended') {
+      await store.audioContext.resume().catch(() => {});
+    }
     await audio.play();
   } catch (err: unknown) {
     if (err instanceof Error && err.name === 'NotAllowedError') {
@@ -187,6 +194,27 @@ let sleepTimerIntervalId: ReturnType<typeof setInterval> | null = null;
 // Radio state
 let radioFetchPromise: Promise<void> | null = null;
 
+let loudnessGainNode: GainNode | null = null;
+
+export function applyLoudnessNormalization(loudnessDb?: number) {
+  const { loudnessNormalization } = useSettingsStore.getState();
+  if (!loudnessGainNode) return;
+  const ctx = usePlayerStore.getState().audioContext;
+  if (!ctx) return;
+
+  if (!loudnessNormalization || loudnessDb == null || Number.isNaN(loudnessDb)) {
+    loudnessGainNode.gain.setTargetAtTime(1.0, ctx.currentTime, 0.05);
+    return;
+  }
+
+  // Target -14 LUFS (YouTube standard).
+  // If loudnessDb is +3, track is 3dB louder than target -> gain = 10^(-3/20) = ~0.71
+  // If loudnessDb is -2, track is 2dB quieter than target -> gain = 10^(2/20) = ~1.26
+  const rawGain = Math.pow(10, (-loudnessDb) / 20);
+  const targetGain = Math.max(0.25, Math.min(2.0, rawGain));
+  loudnessGainNode.gain.setTargetAtTime(targetGain, ctx.currentTime, 0.05);
+}
+
 export const usePlayerStore = create<PlayerState>((set, get) => ({
   currentTrack: restored.currentTrack || null,
   isPlaying: false,
@@ -201,6 +229,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   repeatMode: (restored.repeatMode as RepeatMode) || 'off',
   isQueueOpen: false,
   isLyricsOpen: false,
+  isMiniPlayerOpen: false,
   isVisualizerActive: false,
   isLoading: false,
   audioElement: null,
@@ -222,17 +251,19 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
       const source = ctx.createMediaElementSource(state.audioElement);
+
+      loudnessGainNode = ctx.createGain();
+      loudnessGainNode.gain.value = 1.0;
+      source.connect(loudnessGainNode);
       
-      equalizer.init(ctx, source, state.audioElement);
-      
-      // Routing: Source -> EQ Input => EQ Output -> Analyser -> Destination
-      if (equalizer.inputNode && equalizer.outputNode) {
-        source.connect(equalizer.inputNode);
-        equalizer.outputNode.connect(analyser);
-      } else {
-        source.connect(analyser);
+      try {
+        equalizer.init(ctx, source, state.audioElement);
+      } catch (eqErr) {
+        console.warn('EQ init non-fatal:', eqErr);
       }
       
+      // Unbroken Audio Graph: Source -> LoudnessGainNode -> Analyser -> Destination
+      loudnessGainNode.connect(analyser);
       analyser.connect(ctx.destination);
       set({ audioContext: ctx, analyserNode: analyser });
     } catch (e) {
@@ -242,6 +273,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   play: async (track, queue, startIndex) => {
     const state = get();
+    get().initAudioContext();
     const seq = ++playbackSequence;
     if (queue) {
       // New queue = reset radio seeds if not in radio mode
@@ -311,38 +343,27 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
     try {
       const { audioQuality } = useSettingsStore.getState();
-
-      // Check preload cache first
       const preloadKey = `${track.id}_${audioQuality}`;
-      let streamUrl = preloadCache.get(preloadKey) || null;
 
-      if (!streamUrl) {
-        // Use unified musicAPI for multi-source streaming
-        streamUrl = await musicAPI.getStreamUrl(track, audioQuality);
-      }
+      // Check local streamUrl or preload cache first
+      let streamUrl = track.streamUrl || preloadCache.get(preloadKey) || null;
 
-      // Quality fallback chain for monochrome sources
-      if (!streamUrl && (track.source === 'tidal' || !track.source)) {
-        const fallbackChain: Record<string, string[]> = {
-          'HI_RES_LOSSLESS': ['LOSSLESS', 'HIGH', 'LOW'],
-          'LOSSLESS': ['HIGH', 'LOW'],
-          'HIGH': ['LOW'],
-          'LOW': [],
-          'AUTO': ['HIGH', 'LOSSLESS', 'LOW'],
-          'DEFAULT': ['HIGH', 'LOW'],
-        };
-        const fallbacks = fallbackChain[audioQuality] || ['HIGH', 'LOW'];
-        for (const fallback of fallbacks) {
-          console.warn(`Quality ${audioQuality} failed, trying ${fallback}`);
-          streamUrl = await musicAPI.getStreamUrl({ ...track, streamUrl: undefined }, fallback);
-          if (streamUrl) break;
+      if (!streamUrl && track.source !== 'local') {
+        const details = await musicAPI.getStreamDetails(track);
+        if (details) {
+          streamUrl = details.url;
+          track.loudnessDb = details.loudnessDb;
         }
       }
 
       if (seq !== playbackSequence) return;
 
-      if (streamUrl && state.audioElement) {
-        const audio = state.audioElement;
+      const audio = get().audioElement || (typeof document !== 'undefined' ? document.querySelector('audio') : null);
+      if (audio && !get().audioElement) {
+        set({ audioElement: audio });
+      }
+
+      if (streamUrl && audio) {
         audio.pause();
         audio.src = streamUrl;
         audio.volume = state.isMuted ? 0 : state.volume;
@@ -352,6 +373,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         if (seq !== playbackSequence) return;
 
         await safePlay(audio);
+        applyLoudnessNormalization(track.loudnessDb);
 
         set({
           isPlaying: true,
@@ -371,22 +393,18 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         console.warn('No stream URL found for track:', track.id, track.title);
 
         // ─── Second-chance retry ───
-        // Clear any pre-resolved URL and try again through the full fallback chain.
-        // This handles transient network blips on the first attempt.
         try {
-          const retryUrl = await musicAPI.getStreamUrl(
-            { ...track, streamUrl: undefined },
-            audioQuality
-          );
-          if (retryUrl && state.audioElement && seq === playbackSequence) {
-            const audio = state.audioElement;
+          const retryDetails = await musicAPI.getStreamDetails({ ...track, streamUrl: undefined });
+          if (retryDetails && audio && seq === playbackSequence) {
+            track.loudnessDb = retryDetails.loudnessDb;
             audio.pause();
-            audio.src = retryUrl;
+            audio.src = retryDetails.url;
             audio.volume = state.isMuted ? 0 : state.volume;
             audio.load();
             await waitForCanPlay(audio);
             if (seq !== playbackSequence) return;
             await safePlay(audio);
+            applyLoudnessNormalization(track.loudnessDb);
             set({ isPlaying: true, isLoading: false, duration: track.duration || 0 });
             saveQueueState({ ...get() });
             preloadNextTracks(get().queue, get().queueIndex);
@@ -435,19 +453,34 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   togglePlayPause: () => {
-    const { audioElement, isPlaying } = get();
+    const { audioElement, isPlaying, currentTrack, queue, queueIndex } = get();
     if (!audioElement) return;
     if (isPlaying) {
       audioElement.pause();
       set({ isPlaying: false });
     } else {
+      if ((!audioElement.src || audioElement.src === '' || audioElement.src === window.location.href) && currentTrack) {
+        get().play(currentTrack, queue, queueIndex);
+        return;
+      }
+      get().initAudioContext();
       safePlay(audioElement);
       set({ isPlaying: true });
     }
   },
 
   pause: () => { get().audioElement?.pause(); set({ isPlaying: false }); },
-  resume: () => { const el = get().audioElement; if (el) safePlay(el); set({ isPlaying: true }); },
+  resume: () => {
+    const { audioElement, currentTrack, queue, queueIndex } = get();
+    if (!audioElement) return;
+    if ((!audioElement.src || audioElement.src === '' || audioElement.src === window.location.href) && currentTrack) {
+      get().play(currentTrack, queue, queueIndex);
+      return;
+    }
+    get().initAudioContext();
+    safePlay(audioElement);
+    set({ isPlaying: true });
+  },
 
   next: () => {
     const { queue, queueIndex, repeatMode, isRadioEnabled } = get();
@@ -613,6 +646,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setDuration: (dur) => set({ duration: dur }),
   toggleQueue: () => set(s => ({ isQueueOpen: !s.isQueueOpen, isLyricsOpen: false })),
   toggleLyrics: () => set(s => ({ isLyricsOpen: !s.isLyricsOpen, isQueueOpen: false })),
+  toggleMiniPlayer: () => set(s => ({ isMiniPlayerOpen: !s.isMiniPlayerOpen })),
+  setMiniPlayerOpen: (open: boolean) => set({ isMiniPlayerOpen: open }),
   toggleVisualizer: () => set(s => ({ isVisualizerActive: !s.isVisualizerActive })),
 
   // Radio mode
@@ -858,4 +893,8 @@ if ('mediaSession' in navigator) {
   navigator.mediaSession.setActionHandler('seekto', (details) => {
     if (details.seekTime !== undefined) usePlayerStore.getState().seek(details.seekTime);
   });
+}
+
+if (typeof window !== 'undefined') {
+  (window as any).usePlayerStore = usePlayerStore;
 }

@@ -11,7 +11,6 @@ import LibraryPage from "@/pages/LibraryPage";
 import ArtistPage from "@/pages/ArtistPage";
 import PlaylistPage from "@/pages/PlaylistPage";
 import SettingsPage from "@/pages/SettingsPage";
-import InstancesPage from "@/pages/InstancesPage";
 import NotFound from "./pages/NotFound.tsx";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 
@@ -33,7 +32,6 @@ const App = () => (
             <Route path="/artist/:id" element={<ArtistPage />} />
             <Route path="/playlist/:id" element={<PlaylistPage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/settings/instances" element={<InstancesPage />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

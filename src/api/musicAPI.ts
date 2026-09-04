@@ -1,25 +1,10 @@
-// Unified Music API Orchestrator
-// Routes all music functions through Monochrome's MusicAPI
-// UI components remain unchanged — only this API layer is modified
+// Unified Music API Orchestrator — YouTube Music (InnerTube) only, limusic-style.
+// All music functions route through the YTMusic client. UI remains unchanged.
 
-import type { Track, Artist, Album, Playlist, SearchResults } from './types';
-import {
-  monoSearch,
-  monoSearchTracks,
-  monoSearchArtists,
-  monoSearchAlbums,
-  monoSearchPlaylists,
-  monoGetTrack,
-  monoGetAlbum,
-  monoGetArtist,
-  monoGetPlaylist,
-  monoGetStreamUrl,
-  monoGetTrackRecommendations,
-  monoGetCoverUrl,
-  monoGetArtistPictureUrl,
-  monoGetArtistBiography,
-} from './monochromeBridge';
-import { ytdlpClient } from './ytdlpClient';
+import type { Track, Artist, Album, Playlist, SearchResults, Lyrics } from './types';
+import { ytmusicClient } from './ytmusicClient';
+import { invidiousClient } from './invidiousClient';
+import { useSettingsStore } from '@/stores/settingsStore';
 
 // ========== Deduplication ==========
 
@@ -42,17 +27,16 @@ class MusicAPI {
   // ===== Search =====
   async search(query: string, signal?: AbortSignal): Promise<SearchResults> {
     try {
-      const result = await monoSearch(query);
-      return result;
+      return await ytmusicClient.search(query, signal);
     } catch (e) {
-      console.error('[musicAPI] Monochrome search failed:', e);
+      console.error('[musicAPI] Search failed:', e);
       return { tracks: [], albums: [], artists: [], playlists: [], videos: [] };
     }
   }
 
   async searchTracks(query: string, signal?: AbortSignal): Promise<Track[]> {
     try {
-      return await monoSearchTracks(query);
+      return await ytmusicClient.searchSongs(query, signal);
     } catch {
       return [];
     }
@@ -60,7 +44,7 @@ class MusicAPI {
 
   async searchArtists(query: string, signal?: AbortSignal): Promise<Artist[]> {
     try {
-      return await monoSearchArtists(query);
+      return await ytmusicClient.searchArtists(query, signal);
     } catch {
       return [];
     }
@@ -68,7 +52,7 @@ class MusicAPI {
 
   async searchAlbums(query: string, signal?: AbortSignal): Promise<Album[]> {
     try {
-      return await monoSearchAlbums(query);
+      return await ytmusicClient.searchAlbums(query, signal);
     } catch {
       return [];
     }
@@ -76,7 +60,7 @@ class MusicAPI {
 
   async searchPlaylists(query: string, signal?: AbortSignal): Promise<Playlist[]> {
     try {
-      return await monoSearchPlaylists(query);
+      return await ytmusicClient.searchPlaylists(query, signal);
     } catch {
       return [];
     }
@@ -84,106 +68,83 @@ class MusicAPI {
 
   // ===== Suggestions =====
   async getSuggestions(query: string): Promise<string[]> {
-    // Monochrome does not natively expose a getSuggestions method.
-    return [];
+    return ytmusicClient.getSuggestions(query);
   }
 
   // ===== Get Track =====
   async getTrack(id: string | number): Promise<Track> {
-    return monoGetTrack(id);
+    const t = await ytmusicClient.getTrack(id);
+    return t || ({} as Track);
   }
 
   // ===== Get Album =====
-  async getAlbum(id: string | number): Promise<Album> {
-    return monoGetAlbum(id);
+  async getAlbum(id: string | number): Promise<Album | null> {
+    return ytmusicClient.getAlbum(id);
   }
 
   // ===== Get Artist =====
   async getArtist(id: number | string): Promise<Artist | null> {
-    try {
-      const artist = await monoGetArtist(id);
-      if (artist) return artist;
-    } catch (e) {
-      console.warn('[musicAPI] monoGetArtist failed:', e);
-    }
-    return null;
+    return ytmusicClient.getArtist(id);
   }
 
   // ===== Get Playlist =====
   async getPlaylist(id: string): Promise<Playlist | null> {
-    try {
-      return await monoGetPlaylist(id);
-    } catch {
-      return null;
-    }
+    return ytmusicClient.getPlaylist(id);
   }
 
   // ===== Streaming =====
-  // Routes exclusively through Monochrome's stream resolution
-  async getStreamUrl(track: Track, quality: string = 'HIGH'): Promise<string | null> {
-    // If track has a pre-resolved stream URL, use it
-    if (track.streamUrl) return track.streamUrl;
-
-    // ─── Monochrome stream resolution ───
-    try {
-      const url = await monoGetStreamUrl(track.id, quality);
-      if (url) {
-        console.info(`[musicAPI] Monochrome stream success for "${track.title}"`);
-        return url;
-      }
-    } catch (e) {
-      console.warn('[musicAPI] Monochrome stream failed:', e);
+  async getStreamDetails(track: Track): Promise<{ url: string; mimeType: string; bitrate: number; loudnessDb: number } | null> {
+    if (track.streamUrl) {
+      return { url: track.streamUrl, mimeType: 'audio/webm', bitrate: 128000, loudnessDb: track.loudnessDb || 0 };
     }
 
-    // ─── Fallback: yt-dlp API ───
-    if (track.videoId || track.source === 'youtube' || track.source === 'piped') {
+    const { audioStreamSource, invidiousFallbackToNative } = useSettingsStore.getState();
+
+    if (audioStreamSource === 'invidious') {
       try {
-        const videoId = track.videoId || String(track.id);
-        const ytdlpUrl = await ytdlpClient.getStreamUrl(videoId);
-        if (ytdlpUrl) {
-          console.info(`[musicAPI] yt-dlp stream success for "${track.title}"`);
-          return ytdlpUrl;
+        const invDetails = await invidiousClient.getStreamDetails(track);
+        if (invDetails && invDetails.url) {
+          return invDetails;
         }
-      } catch (e) {
-        console.warn('[musicAPI] yt-dlp stream failed:', e);
+      } catch (err) {
+        console.warn('[musicAPI] Invidious stream extraction failed:', err);
       }
+
+      if (!invidiousFallbackToNative) {
+        return null;
+      }
+      console.log('[musicAPI] Falling back to native stream extractor');
     }
 
-    console.warn(`[musicAPI] Stream resolution failed for "${track.title}"`);
-    return null;
+    return ytmusicClient.getStreamDetails(track);
+  }
+
+  async getStreamUrl(track: Track, quality: string = 'HIGH'): Promise<string | null> {
+    const details = await this.getStreamDetails(track);
+    return details ? details.url : null;
   }
 
   // ===== Recommendations =====
   async getUpNexts(track: Track): Promise<Track[]> {
-    try {
-      if (track.id) {
-        return await monoGetTrackRecommendations(track.id);
-      }
-    } catch { /* continue */ }
-    return [];
+    return ytmusicClient.getUpNexts(track);
+  }
+
+  async getTrackRecommendations(track: Track): Promise<Track[]> {
+    return ytmusicClient.getTrackRecommendations(track);
   }
 
   // ===== Home Recommendations =====
-  // ===== Home Recommendations =====
-  async getHomeRecommendations(recentTracks: Track[]): Promise<{
+  async getHomeRecommendations(_recentTracks: Track[]): Promise<{
     songs: Track[];
     albums: Album[];
     artists: Artist[];
   }> {
-    // Monochrome doesn't have a direct home recommendations method.
-    // Return empty placeholders.
-    return {
-      songs: [],
-      albums: [],
-      artists: [],
-    };
+    return ytmusicClient.getHomeRecommendations();
   }
 
   // ===== Trending =====
-  // ===== Trending =====
   async getTrending(region: string = 'IN'): Promise<Track[]> {
-    // Return empty for Trending as Monochrome doesn't have a direct trending endpoint.
-    return [];
+    return ytmusicClient.getTrending(region);
   }
 
   // ===== Playlist-based recommendations =====
@@ -192,52 +153,77 @@ class MusicAPI {
     limit: number = 20,
     options: { knownTrackIds?: Set<string | number> } = {}
   ): Promise<Track[]> {
-    const allRecs: Track[] = [];
-
-    // Monochrome recommendations
-    for (const seed of seedTracks.slice(0, 3)) {
-      try {
-        const recs = await monoGetTrackRecommendations(seed.id);
-        allRecs.push(...recs);
-      } catch { /* continue */ }
-    }
-
-    const knownIds = options.knownTrackIds;
-    const filtered = knownIds
-      ? allRecs.filter(t => !knownIds.has(String(t.id)))
-      : allRecs;
-
-    return filtered.sort(() => Math.random() - 0.5).slice(0, limit);
+    return ytmusicClient.getRecommendedTracksForPlaylist(seedTracks, limit, options);
   }
 
   // ===== Track Info =====
-  async getTrackInfo(id: number | string) {
-    return monoGetTrack(id);
+  async getTrackInfo(id: number | string): Promise<Track> {
+    return this.getTrack(id);
   }
 
-  // ===== Lyrics =====
-  // ===== Lyrics =====
-  async getLyrics(title: string, artist: string, album?: string, duration?: number) {
+  // ===== Lyrics (Limusic Synced + YouTube Music) =====
+  async getLyrics(title: string, artist: string, album?: string, duration?: number, videoId?: string): Promise<Lyrics | null> {
     try {
-      const { musixmatchClient } = await import('./musixmatchClient');
-      const mxmResult = await musixmatchClient.getLyrics(title, artist);
-      if (mxmResult && mxmResult.synced) return mxmResult;
-    } catch { /* Musixmatch unavailable */ }
-    return null;
+      let resolvedVideoId = videoId;
+      if (!resolvedVideoId) {
+        const query = artist ? `${artist} ${title}` : title;
+        const results = await ytmusicClient.searchSongs(query);
+        resolvedVideoId = results[0]?.videoId;
+      }
+      return await ytmusicClient.getLyrics(title, artist, album, duration, resolvedVideoId);
+    } catch {
+      return null;
+    }
   }
 
-  // ===== Cover Art =====
+  // ===== YouTube Music Account & Library Write Actions =====
+  async getAccountInfo() {
+    return ytmusicClient.getAccountInfo();
+  }
+
+  async getLibrary() {
+    return ytmusicClient.getLibrary();
+  }
+
+  async getLikedSongs(): Promise<Track[]> {
+    return ytmusicClient.getLikedSongs();
+  }
+
+  async rateSong(videoId: string, rating: 'like' | 'dislike' | 'indifferent'): Promise<boolean> {
+    return ytmusicClient.rateSong(videoId, rating);
+  }
+
+  async createPlaylist(title: string, description?: string) {
+    return ytmusicClient.createPlaylist(title, description);
+  }
+
+  async deletePlaylist(playlistId: string) {
+    return ytmusicClient.deletePlaylist(playlistId);
+  }
+
+  async addToPlaylist(playlistId: string, videoId: string) {
+    return ytmusicClient.addToPlaylist(playlistId, videoId);
+  }
+
+  async removeFromPlaylist(playlistId: string, videoId: string) {
+    return ytmusicClient.removeFromPlaylist(playlistId, videoId);
+  }
+
+  async subscribeArtist(channelId: string, action: 'subscribe' | 'unsubscribe' = 'subscribe') {
+    return ytmusicClient.subscribeArtist(channelId, action);
+  }
+
   // ===== Cover Art =====
   getCoverUrl(coverId: string | undefined, size: number = 640) {
-    return monoGetCoverUrl(coverId, String(size)) || '';
+    return ytmusicClient.getCoverUrl(coverId, size) || '';
   }
 
   getArtistPictureUrl(pictureId: string | undefined, size?: number) {
-    return monoGetArtistPictureUrl(pictureId, String(size || 320)) || '';
+    return ytmusicClient.getArtistPictureUrl(pictureId, size || 320) || '';
   }
 
   clearCache() {
-    // No-op for now. Monochrome handles its own cache.
+    ytmusicClient.clearCache();
   }
 }
 

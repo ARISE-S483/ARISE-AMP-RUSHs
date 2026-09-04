@@ -27,18 +27,14 @@ export function AudioEngine() {
 
   // Unlock audio context on first user gesture (required by browsers)
   const unlockAudio = useCallback(() => {
-    if (unlockedRef.current || !audioRef.current) return;
-    const el = audioRef.current;
-    // Short silent play to unlock the element
-    el.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
-    el.volume = 0;
-    el.play().then(() => {
-      el.pause();
-      el.currentTime = 0;
-      el.volume = usePlayerStore.getState().isMuted ? 0 : usePlayerStore.getState().volume;
-      el.removeAttribute('src');
-      unlockedRef.current = true;
-    }).catch(() => {});
+    if (unlockedRef.current) return;
+    unlockedRef.current = true;
+    const store = usePlayerStore.getState();
+    if (!store.audioContext) {
+      store.initAudioContext();
+    } else if (store.audioContext.state === 'suspended') {
+      store.audioContext.resume().catch(() => {});
+    }
   }, []);
 
   // ─── Audio Error Recovery ───
@@ -49,7 +45,7 @@ export function AudioEngine() {
     if (!audio) return;
 
     const src = audio.src;
-    // Ignore errors from the silent unlock audio
+    // Ignore errors from empty or data src
     if (!src || src.startsWith('data:')) return;
 
     const store = usePlayerStore.getState();
@@ -66,12 +62,9 @@ export function AudioEngine() {
       );
 
       try {
-        // Create a modified track that forces the fallback chain to skip the failed URL
-        // by clearing any cached streamUrl and making it re-resolve
         const fallbackTrack = {
           ...track,
-          streamUrl: undefined, // force re-fetch
-          // On retry 2+, also clear videoId to force a fresh YTM search
+          streamUrl: undefined,
           videoId: retryNum >= 2 ? undefined : track.videoId,
         };
 
@@ -89,8 +82,6 @@ export function AudioEngine() {
       } catch (err) {
         console.warn(`[AudioEngine] Fallback fetch failed on retry ${retryNum}:`, err);
       }
-
-      // If this specific retry didn't work, try again (will recurse through retries)
       return;
     }
 
@@ -98,7 +89,7 @@ export function AudioEngine() {
     console.error(`[AudioEngine] All ${MAX_RETRIES} retries exhausted for "${track.title}". Skipping.`);
     toast({
       title: 'Playback failed',
-      description: `Could not stream "${track.title}" from any source. Skipping...`,
+      description: `Could not stream "${track.title}" from YouTube. Skipping...`,
       variant: 'destructive',
     });
     usePlayerStore.setState({ isLoading: false, isPlaying: false });
@@ -111,7 +102,7 @@ export function AudioEngine() {
       setAudioElement(audioRef.current);
     }
 
-    // Listen for first user interaction to unlock audio
+    // Listen for first user interaction to resume audio context
     const events = ['click', 'touchstart', 'keydown'] as const;
     events.forEach(e => document.addEventListener(e, unlockAudio, { once: true, passive: true }));
     return () => {
@@ -125,6 +116,8 @@ export function AudioEngine() {
       preload="auto"
       playsInline
       crossOrigin="anonymous"
+      onPlay={() => usePlayerStore.setState({ isPlaying: true })}
+      onPause={() => usePlayerStore.setState({ isPlaying: false })}
       onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
       onDurationChange={(e) => setDuration(e.currentTarget.duration || 0)}
       onEnded={next}

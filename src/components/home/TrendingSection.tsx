@@ -18,6 +18,7 @@ function TrackCardInline({ track, tracks, index }: { track: Track; tracks: Track
     <TrackContextMenu>
       {({ onContextMenu, onLongPress }) => (
         <div
+          data-testid="track-card"
           className="flex-shrink-0 w-[150px] md:w-[175px] cursor-pointer group"
           style={{ scrollSnapAlign: 'start' }}
           onClick={() => play(track, tracks, index)}

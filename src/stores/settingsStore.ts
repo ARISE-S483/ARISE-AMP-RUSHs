@@ -8,12 +8,16 @@ export type BackgroundImage = 'blue-mountains' | 'cosmic-purple' | 'dark-forest'
 
 interface SettingsState {
   // Audio
+  audioStreamSource: 'invidious' | 'native';
+  invidiousInstanceUrl: string;
+  invidiousFallbackToNative: boolean;
   audioQuality: string;
   preferDolbyAtmos: boolean;
   nativeOsAtmos: boolean;
   showQualityBadges: boolean;
   albumReleaseYear: boolean;
   gaplessPlayback: boolean;
+  loudnessNormalization: boolean;
   silenceRemoval: boolean;
   crossfade: boolean;
   crossfadeDuration: number;
@@ -85,9 +89,6 @@ interface SettingsState {
   showFavorites: boolean;
   showPlaylists: boolean;
 
-  // Streaming
-  autoRefreshInstances: boolean;
-
   // Actions
   setSetting: <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void;
   resetSettings: () => void;
@@ -96,12 +97,16 @@ interface SettingsState {
 const STORAGE_KEY = 'melodies_settings';
 
 const defaultSettings = {
+  audioStreamSource: 'invidious' as 'invidious' | 'native',
+  invidiousInstanceUrl: 'https://inv.nadeko.net',
+  invidiousFallbackToNative: true,
   audioQuality: 'AUTO',
   preferDolbyAtmos: false,
   nativeOsAtmos: true,
   showQualityBadges: true,
   albumReleaseYear: true,
   gaplessPlayback: true,
+  loudnessNormalization: true,
   silenceRemoval: false,
   crossfade: false,
   crossfadeDuration: 1,
@@ -156,7 +161,6 @@ const defaultSettings = {
   showRecentlyPlayed: true,
   showFavorites: true,
   showPlaylists: true,
-  autoRefreshInstances: false,
 };
 
 function loadSettings(): typeof defaultSettings {
@@ -169,33 +173,10 @@ function loadSettings(): typeof defaultSettings {
   return { ...defaultSettings };
 }
 
-const MONO_STORAGE_MAP: Record<string, string> = {
-  audioQuality: 'playback-quality',
-  downloadQuality: 'download-quality',
-  preferDolbyAtmos: 'prefer-dolby-atmos',
-  nativeOsAtmos: 'native-os-atmos',
-  showQualityBadges: 'show-quality-badges',
-  albumReleaseYear: 'show-track-date',
-  gaplessPlayback: 'gapless-playback',
-  silenceRemoval: 'remove-silence',
-  crossfade: 'crossfade',
-  crossfadeDuration: 'crossfade-duration',
-  replayGainMode: 'replay-gain-mode',
-  replayGainPreamp: 'replay-gain-preamp',
-};
-
 function saveSettings(state: Partial<typeof defaultSettings>) {
   try {
     const current = loadSettings();
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...current, ...state }));
-    
-    // Sync with Monochrome's individual localStorage keys
-    for (const [key, val] of Object.entries(state)) {
-      const monoKey = MONO_STORAGE_MAP[key];
-      if (monoKey) {
-        localStorage.setItem(monoKey, String(val));
-      }
-    }
   } catch { /* */ }
 }
 
@@ -212,9 +193,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   resetSettings: () => {
     set(defaultSettings);
     localStorage.removeItem(STORAGE_KEY);
-    for (const monoKey of Object.values(MONO_STORAGE_MAP)) {
-      localStorage.removeItem(monoKey);
-    }
   },
 
   initCustomBackground: async () => {

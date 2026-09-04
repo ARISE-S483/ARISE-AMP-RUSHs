@@ -7,7 +7,30 @@ export function ytmusicPlugin(): Plugin {
   let ytmusicInstance: any = null;
   let initPromise: Promise<void> | null = null;
 
-  async function getYTMusic() {
+  const userInstances = new Map<string, any>();
+  const streamUrlCache = new Map<string, { url: string; directUrl: string; mimeType: string; bitrate: number; loudnessDb: number; timestamp: number }>();
+
+  async function getYTMusic(cookie?: string) {
+    if (cookie && cookie.trim()) {
+      const trimmed = cookie.trim();
+      if (userInstances.has(trimmed)) return userInstances.get(trimmed);
+      try {
+        const { Innertube, UniversalCache, Platform } = await import('youtubei.js');
+        Platform.shim.eval = async (data: any) => {
+          return new Function(data.output)();
+        };
+        const inst = await Innertube.create({
+          cookie: trimmed,
+          cache: new UniversalCache(false),
+          generate_session_locally: true,
+        });
+        userInstances.set(trimmed, inst);
+        return inst;
+      } catch (err) {
+        console.warn('[youtubei.js] Authenticated instance creation failed, falling back to public:', err);
+      }
+    }
+
     if (ytmusicInstance) return ytmusicInstance;
     if (initPromise) {
       await initPromise;
@@ -15,11 +38,13 @@ export function ytmusicPlugin(): Plugin {
     }
     initPromise = (async () => {
       try {
-        const { Innertube, UniversalCache } = await import('youtubei.js');
+        const { Innertube, UniversalCache, Platform } = await import('youtubei.js');
+        Platform.shim.eval = async (data: any) => {
+          return new Function(data.output)();
+        };
         ytmusicInstance = await Innertube.create({
           cache: new UniversalCache(true),
           generate_session_locally: true,
-          client_type: 'YTMUSIC' as any
         });
         console.log('[youtubei.js] Initialized successfully');
       } catch (error) {
@@ -164,9 +189,10 @@ export function ytmusicPlugin(): Plugin {
       const url = new URL(req.url, `http://${req.headers.host}`);
       const pathParts = url.pathname.replace('/api/ytmusic/', '').split('/');
       const endpoint = pathParts[0];
+      const cookieHeader = (req.headers['x-youtube-cookie'] as string) || (req.headers['authorization'] as string) || '';
 
       try {
-        const yt = await getYTMusic();
+        const yt = await getYTMusic(cookieHeader);
         if (!yt) return sendError(res, 'youtubei.js not initialized', 503);
 
         switch (endpoint) {
@@ -268,12 +294,49 @@ export function ytmusicPlugin(): Plugin {
             return sendJSON(res, { lyrics: lyrics?.description?.text || '' });
           }
 
-          case 'playlist':
           case 'playlist-videos': {
             const playlistId = pathParts[1];
             if (!playlistId) return sendError(res, 'Missing playlistId', 400);
             const playlist = await yt.music.getPlaylist(playlistId);
             return sendJSON(res, playlist.items || []);
+          }
+
+          case 'playlist': {
+            const playlistId = pathParts[1];
+            if (!playlistId) return sendError(res, 'Missing playlistId', 400);
+            const playlist = await yt.music.getPlaylist(playlistId);
+            return sendJSON(res, playlist || {});
+          }
+
+          case 'album': {
+            const browseId = pathParts[1];
+            if (!browseId) return sendError(res, 'Missing browseId', 400);
+            const album = await yt.music.getAlbum(browseId);
+            return sendJSON(res, album || {});
+          }
+
+          case 'artist': {
+            const browseId = pathParts[1];
+            if (!browseId) return sendError(res, 'Missing browseId', 400);
+            try {
+              const artist = await yt.music.getArtist(browseId);
+              return sendJSON(res, artist || {});
+            } catch (err: any) {
+              console.warn('[youtubei.js] getArtist failed, falling back to channel:', err?.message);
+              const channel = await yt.getChannel(browseId);
+              return sendJSON(res, { page: channel, header: channel?.header, sections: channel?.sections });
+            }
+          }
+
+          case 'home': {
+            try {
+              const feed = await yt.music.getHomeFeed();
+              return sendJSON(res, feed || {});
+            } catch (err: any) {
+              console.warn('[youtubei.js] getHomeFeed failed, falling back to explore:', err?.message);
+              const exp = await yt.music.getExplore();
+              return sendJSON(res, exp || {});
+            }
           }
 
           case 'trending': {
@@ -296,53 +359,244 @@ export function ytmusicPlugin(): Plugin {
             }
           }
 
-          case 'stream': {
-            const videoId = pathParts[1];
+          case 'account': {
+            try {
+              const info = await yt.account.getInfo().catch(() => null);
+              const channelName = info?.contents?.channel_name || info?.name || 'YouTube User';
+              const channelHandle = info?.contents?.channel_handle || '@user';
+              const email = info?.contents?.email || '';
+              const thumbnail = info?.contents?.thumbnail?.[0]?.url || '';
+              const channelId = info?.contents?.channel_id || '';
+              return sendJSON(res, { name: channelName, handle: channelHandle, email, thumbnail, channelId });
+            } catch (err: any) {
+              return sendJSON(res, { name: 'YouTube User', handle: '@user', thumbnail: '' });
+            }
+          }
+
+          case 'library': {
+            try {
+              const library = await yt.music.getLibrary();
+              return sendJSON(res, library || {});
+            } catch (err: any) {
+              return sendError(res, err?.message || 'Failed to fetch library', 500);
+            }
+          }
+
+          case 'liked-songs': {
+            try {
+              const liked = await yt.music.getPlaylist('VLLM');
+              return sendJSON(res, liked?.items || []);
+            } catch (err: any) {
+              return sendError(res, err?.message || 'Failed to fetch liked songs', 500);
+            }
+          }
+
+          case 'rate': {
+            const videoId = url.searchParams.get('videoId') || pathParts[1];
+            const rating = (url.searchParams.get('rating') || 'like').toLowerCase();
             if (!videoId) return sendError(res, 'Missing videoId', 400);
+            try {
+              if (rating === 'like') {
+                await yt.music.like(videoId);
+              } else if (rating === 'dislike') {
+                await yt.music.dislike(videoId);
+              } else {
+                await yt.music.removeLike(videoId);
+              }
+              return sendJSON(res, { success: true, videoId, rating });
+            } catch (err: any) {
+              return sendError(res, err?.message || 'Failed to rate song', 500);
+            }
+          }
+
+          case 'playlist-create': {
+            const title = url.searchParams.get('title') || 'New Playlist';
+            const description = url.searchParams.get('description') || '';
+            try {
+              const result = await yt.music.createPlaylist(title, description);
+              return sendJSON(res, result || { success: true });
+            } catch (err: any) {
+              return sendError(res, err?.message || 'Failed to create playlist', 500);
+            }
+          }
+
+          case 'playlist-delete': {
+            const playlistId = pathParts[1] || url.searchParams.get('playlistId');
+            if (!playlistId) return sendError(res, 'Missing playlistId', 400);
+            try {
+              const result = await yt.music.deletePlaylist(playlistId);
+              return sendJSON(res, result || { success: true });
+            } catch (err: any) {
+              return sendError(res, err?.message || 'Failed to delete playlist', 500);
+            }
+          }
+
+          case 'playlist-edit': {
+            const playlistId = pathParts[1] || url.searchParams.get('playlistId');
+            const action = url.searchParams.get('action'); // 'add' or 'remove'
+            const videoId = url.searchParams.get('videoId');
+            if (!playlistId || !videoId) return sendError(res, 'Missing playlistId or videoId', 400);
+            try {
+              if (action === 'remove') {
+                await yt.music.removeTracksFromPlaylist(playlistId, [videoId]);
+              } else {
+                await yt.music.addTracksToPlaylist(playlistId, [videoId]);
+              }
+              return sendJSON(res, { success: true, playlistId, videoId, action });
+            } catch (err: any) {
+              return sendError(res, err?.message || 'Failed to edit playlist', 500);
+            }
+          }
+
+          case 'subscribe': {
+            const channelId = pathParts[1] || url.searchParams.get('channelId');
+            const action = url.searchParams.get('action') || 'subscribe';
+            if (!channelId) return sendError(res, 'Missing channelId', 400);
+            try {
+              if (action === 'unsubscribe') {
+                await yt.music.unsubscribe(channelId);
+              } else {
+                await yt.music.subscribe(channelId);
+              }
+              return sendJSON(res, { success: true, channelId, action });
+            } catch (err: any) {
+              return sendError(res, err?.message || 'Failed to subscribe/unsubscribe', 500);
+            }
+          }
+
+          case 'invidious': {
+            let videoId = url.searchParams.get('videoId') || url.searchParams.get('id');
+            if (!videoId) {
+              videoId = (pathParts[1] === 'stream' ? pathParts[2] : pathParts[1]) || pathParts[2];
+            }
+            if (!videoId) return sendError(res, 'Missing videoId', 400);
+
+            const customInstance = (url.searchParams.get('instance') || '').trim().replace(/\/+$/, '');
+            const instances = [
+              ...(customInstance ? [customInstance] : []),
+              'https://inv.nadeko.net',
+              'https://invidious.nerdvpn.de',
+              'https://invidious.tiekoetter.com',
+              'https://invidious.f5.si',
+            ];
+
+            const probeInstance = async (inst: string) => {
+              const controller = new AbortController();
+              const timeout = setTimeout(() => controller.abort(), 3500);
+              try {
+                const invRes = await fetch(`${inst}/api/v1/videos/${encodeURIComponent(videoId)}`, {
+                  headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                  },
+                  signal: controller.signal,
+                });
+                clearTimeout(timeout);
+                if (!invRes.ok) return null;
+                const data: any = await invRes.json();
+                const formats = [...(data.adaptiveFormats || []), ...(data.formatStreams || [])];
+                const audioFormats = formats.filter((f: any) => {
+                  if (!f || !f.url) return false;
+                  const type = (f.type || '').toLowerCase();
+                  const container = (f.container || '').toLowerCase();
+                  return type.startsWith('audio/') || container === 'webm' || container === 'm4a' || !!f.audioQuality;
+                });
+                if (audioFormats.length === 0) return null;
+                audioFormats.sort((a: any, b: any) => (parseInt(b.bitrate || '0', 10) || 0) - (parseInt(a.bitrate || '0', 10) || 0));
+                const best = audioFormats[0];
+                let directUrl = best.url;
+                if (directUrl.startsWith('/')) directUrl = `${inst}${directUrl}`;
+                return {
+                  url: `/api/ytmusic/proxy?url=${encodeURIComponent(directUrl)}`,
+                  directUrl,
+                  mimeType: best.type || (best.container ? `audio/${best.container}` : 'audio/webm'),
+                  bitrate: parseInt(best.bitrate || '160000', 10) || 160000,
+                  loudnessDb: 0,
+                  instance: inst,
+                };
+              } catch {
+                clearTimeout(timeout);
+                return null;
+              }
+            };
+
+            // Probe instances concurrently
+            const results = await Promise.all(instances.map(probeInstance));
+            const extracted = results.find((r) => r !== null);
+
+            if (extracted) {
+              return sendJSON(res, extracted);
+            }
+            return sendError(res, 'Invidious instances did not return working audio streams', 502);
+          }
+
+          case 'stream': {
+            const videoId = pathParts[1] || url.searchParams.get('videoId') || url.searchParams.get('id');
+            if (!videoId) return sendError(res, 'Missing videoId', 400);
+
+            const cached = streamUrlCache.get(videoId);
+            if (cached && (Date.now() - cached.timestamp < 4 * 3600 * 1000)) {
+              return sendJSON(res, cached);
+            }
 
             let finalUrl: string | null = null;
             let finalMimeType = 'audio/webm';
-            let finalBitrate = 128000;
+            let finalBitrate = 160000;
+            let finalLoudnessDb = 0;
 
-            // 1. Try youtubei.js (Fastest)
+            // 1. Primary: Use native yt-dlp binary (VISIONOS / ad-free high-speed direct stream)
             try {
-              const info = await yt.getBasicInfo(videoId);
-              const streamingData = info.streaming_data;
-              
-              if (streamingData) {
-                async function getFormatUrl(format: any): Promise<string | null> {
-                  try {
-                    if (format.url) return format.url;
-                    if (typeof format.decipher === 'function') {
-                      const res = format.decipher(yt.session.player);
-                      if (res && typeof res.then === 'function') return await res;
-                      return res;
-                    }
-                    if (format.signature_cipher || format.cipher) {
-                      const params = new URLSearchParams(format.signature_cipher || format.cipher);
-                      return params.get('url');
-                    }
-                  } catch (e) { /* ignore to permit fallback */ }
-                  return null;
-                }
+              const { execFile } = await import('child_process');
+              const path = await import('path');
+              const ytDlpPath = path.join(process.cwd(), 'yt-dlp.exe');
 
-                const audioFormats = (streamingData.adaptive_formats || [])
-                  .filter((f: any) => f.mime_type?.startsWith('audio/'))
-                  .sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
+              // Fetch loudnessDb in parallel
+              yt.getBasicInfo(videoId).then((info: any) => {
+                finalLoudnessDb = (info.basic_info as any)?.loudness_db ?? (info.playability_status as any)?.loudness_db ?? 0;
+              }).catch(() => {});
 
-                for (const fmt of audioFormats) {
-                  const url = await getFormatUrl(fmt);
-                  if (typeof url === 'string' && url.startsWith('http')) {
-                    finalUrl = url;
-                    finalMimeType = fmt.mime_type;
-                    finalBitrate = fmt.bitrate;
-                    break;
+              finalUrl = await new Promise<string>((resolve, reject) => {
+                execFile(ytDlpPath, ['--no-warnings', '--print', 'url', '-f', 'bestaudio/best', `https://www.youtube.com/watch?v=${videoId}`], { timeout: 35000 }, (error, stdout) => {
+                  if (error && stdout.trim() === '') {
+                    reject(error);
+                    return;
                   }
-                }
+                  const url = stdout.trim().split('\n')[0];
+                  if (url && url.startsWith('http')) resolve(url);
+                  else reject(new Error('Invalid URL returned by yt-dlp'));
+                });
+              });
+              finalMimeType = 'audio/webm';
+              finalBitrate = 160000;
+            } catch (dlpErr: any) {
+              console.warn('[ytmusic-plugin] yt-dlp extraction failed, trying youtubei fallback:', dlpErr?.message);
+            }
 
-                if (!finalUrl) {
-                  const muxedFormats = (streamingData.formats || []).sort((a: any, b: any) => (a.bitrate || 0) - (b.bitrate || 0));
-                  for (const fmt of muxedFormats) {
+            // 2. Fallback: youtubei.js
+            if (!finalUrl) {
+              try {
+                const info = await yt.music.getInfo(videoId).catch(() => yt.getBasicInfo(videoId));
+                finalLoudnessDb = (info.basic_info as any)?.loudness_db ?? (info.playability_status as any)?.loudness_db ?? 0;
+                const streamingData = info.streaming_data;
+                
+                if (streamingData) {
+                  async function getFormatUrl(format: any): Promise<string | null> {
+                    try {
+                      if (format.url) return format.url;
+                      if (typeof format.decipher === 'function') {
+                        const res = format.decipher(yt.session.player);
+                        if (res && typeof res.then === 'function') return await res;
+                        return res;
+                      }
+                    } catch (e) { /* ignore to permit fallback */ }
+                    return null;
+                  }
+
+                  const audioFormats = (streamingData.adaptive_formats || [])
+                    .filter((f: any) => f.mime_type?.startsWith('audio/'))
+                    .sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
+
+                  for (const fmt of audioFormats) {
                     const url = await getFormatUrl(fmt);
                     if (typeof url === 'string' && url.startsWith('http')) {
                       finalUrl = url;
@@ -352,15 +606,18 @@ export function ytmusicPlugin(): Plugin {
                     }
                   }
                 }
+              } catch (ytErr: any) {
+                console.warn('[youtubei.js] Extraction fallback failed:', ytErr?.message);
               }
-            } catch (ytErr: any) {
-              console.warn('[youtubei.js] Fast extraction failed:', ytErr?.message);
             }
 
             if (finalUrl) {
-              return sendJSON(res, { url: finalUrl, mimeType: finalMimeType, bitrate: finalBitrate });
+              const streamUrl = `/api/ytmusic/proxy?url=${encodeURIComponent(finalUrl)}`;
+              const result = { url: streamUrl, directUrl: finalUrl, mimeType: finalMimeType, bitrate: finalBitrate, loudnessDb: finalLoudnessDb, timestamp: Date.now() };
+              streamUrlCache.set(videoId, result);
+              return sendJSON(res, result);
             } else {
-              return sendError(res, 'No audio streams found by youtubei.js.', 404);
+              return sendError(res, 'No audio streams found.', 404);
             }
           }
 
@@ -385,7 +642,8 @@ export function ytmusicPlugin(): Plugin {
                 });
               });
               
-              return sendJSON(res, { url: finalUrl, mimeType: 'audio/webm', bitrate: 128000 });
+              const streamUrl = `/api/ytmusic/proxy?url=${encodeURIComponent(finalUrl)}`;
+              return sendJSON(res, { url: streamUrl, directUrl: finalUrl, mimeType: 'audio/webm', bitrate: 160000 });
             } catch (dlpErr: any) {
               console.error('[ytmusic-plugin] yt-dlp fallback failed:', dlpErr?.message);
               return sendError(res, 'Stream extraction failed via yt-dlp completely', 500);
@@ -396,6 +654,14 @@ export function ytmusicPlugin(): Plugin {
             const urlQuery = new URL(req.url!, `http://${req.headers.host}`).searchParams.get('url');
             if (!urlQuery) return sendError(res, 'Missing url query param', 400);
 
+            console.log('[PROXY REQ HEADERS]', {
+              range: req.headers['range'],
+              userAgent: req.headers['user-agent'],
+              referer: req.headers['referer'],
+              origin: req.headers['origin'],
+              secFetchMode: req.headers['sec-fetch-mode'],
+            });
+
             try {
               const https = await import('https');
               const http = await import('http');
@@ -403,10 +669,11 @@ export function ytmusicPlugin(): Plugin {
 
               const proxyReq = mod.get(urlQuery, {
                 headers: {
-                  'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                   'Range': req.headers['range'] || 'bytes=0-',
                 }
               }, (proxyRes) => {
+                console.log('[PROXY GOOGLEVIDEO RES]', proxyRes.statusCode, proxyRes.headers['content-range'] || proxyRes.headers['content-length']);
                 if (proxyRes.statusCode) res.statusCode = proxyRes.statusCode;
                 
                 // Copy all headers securely
@@ -415,6 +682,12 @@ export function ytmusicPlugin(): Plugin {
                     res.setHeader(key, proxyRes.headers[key]!);
                   } catch (e) { /* ignore restricted headers */ }
                 });
+
+                // Enforce CORS for Web Audio API
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+                res.setHeader('Access-Control-Allow-Headers', '*');
+                res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 
                 proxyRes.pipe(res);
 

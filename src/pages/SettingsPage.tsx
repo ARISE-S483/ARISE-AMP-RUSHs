@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings, Volume2, Download, Palette, Music, Mic2, Activity,
-  LayoutDashboard, RotateCcw, ChevronRight, Server, Radio, Brush, Database, Upload, FolderDown,
-  User, Headphones
+  LayoutDashboard, RotateCcw, ChevronRight, Radio, Brush, Database, Upload, FolderDown,
+  User, Headphones, Music2, Key, LogIn, LogOut, RefreshCw, ExternalLink
 } from 'lucide-react';
 import { EQStudio } from '../components/settings/EQStudio';
 import { exportLibrary, importLibrary } from '@/lib/syncExport';
@@ -13,10 +13,12 @@ import { useLastFmStore } from '@/stores/lastfmStore';
 import { useListenBrainzStore } from '@/stores/listenbrainzStore';
 import { useProfileStore } from '@/stores/profileStore';
 import { useSpotifyStore } from '@/stores/spotifyStore';
+import { useAccountStore } from '@/stores/accountStore';
 import { lastfmClient } from '@/api/lastfmClient';
 import { useToast } from '@/hooks/use-toast';
-import InstancesManager from '@/components/settings/InstancesManager';
+import { toast } from 'sonner';
 import SyncManagement from '@/components/settings/SyncManagement';
+import { invidiousClient, KNOWN_INVIDIOUS_INSTANCES } from '@/api/invidiousClient';
 import type {
   VisualizerStyle,
   LyricsSize, BackgroundStyle, NowPlayingStyle, BackgroundImage
@@ -25,6 +27,7 @@ import { saveBackgroundData } from '@/lib/backgroundStore';
 
 const tabs = [
   { id: 'profile', label: 'Profile', icon: User },
+  { id: 'account', label: 'YouTube Music', icon: Music2 },
   { id: 'audio', label: 'Audio', icon: Volume2 },
   { id: 'downloads', label: 'Downloads', icon: Download },
   { id: 'appearance', label: 'Appearance', icon: Palette },
@@ -34,7 +37,6 @@ const tabs = [
   { id: 'visualizer', label: 'Visualizer', icon: Activity },
   { id: 'sidebar', label: 'Sidebar', icon: LayoutDashboard },
   { id: 'integrations', label: 'Integrations', icon: Radio },
-  { id: 'instances', label: 'Instances', icon: Server },
   { id: 'data', label: 'Data', icon: Database },
 ] as const;
 
@@ -202,7 +204,7 @@ export default function SettingsPage() {
       <div className="flex gap-6 flex-col md:flex-row">
         {/* Tab nav */}
         <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0 md:w-48 flex-shrink-0">
-          {tabs.filter(t => t.id !== 'integrations').map(tab => (
+          {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -276,9 +278,17 @@ export default function SettingsPage() {
                 </div>
               )}
 
+              {activeTab === 'account' && (
+                <YouTubeMusicSettings />
+              )}
+
               {activeTab === 'audio' && (
                 <div>
                   <h2 className="font-display font-semibold text-base mb-3">Audio Settings</h2>
+                  <InvidiousAudioSettings />
+                  <SettingRow label="Loudness Normalization" description="Ad-free playback with YouTube volume normalization (gain = 10^(-loudnessDb / 20)) matching limusic libmpv">
+                    <Toggle checked={settings.loudnessNormalization} onChange={(v) => setSetting('loudnessNormalization', v)} />
+                  </SettingRow>
                   <SettingRow label="Streaming Quality" description="Default playback quality for streams">
                     <Select<string>
                       value={settings.audioQuality}
@@ -826,10 +836,6 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              {activeTab === 'instances' && (
-                <InstancesManager />
-              )}
-
               {activeTab === 'data' && (
                 <DataManagement />
               )}
@@ -899,3 +905,226 @@ function DataManagement() {
     </div>
   );
 }
+
+function InvidiousAudioSettings() {
+  const settings = useSettingsStore();
+  const setSetting = settings.setSetting;
+  const [testStatus, setTestStatus] = useState<{ testing: boolean; result?: { ok: boolean; latencyMs: number; version?: string; error?: string } }>({ testing: false });
+
+  const handleTest = async () => {
+    setTestStatus({ testing: true });
+    const res = await invidiousClient.testInstance(settings.invidiousInstanceUrl);
+    setTestStatus({ testing: false, result: res });
+    if (res.ok) {
+      toast.success(`Connected to Invidious (${res.latencyMs}ms, ${res.version})`);
+    } else {
+      toast.error(`Connection failed: ${res.error}`);
+    }
+  };
+
+  return (
+    <div className="mb-6 p-4 rounded-2xl bg-secondary/40 border border-border/60 space-y-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <span>Audio Stream Source</span>
+            <a
+              href="https://docs.invidious.io/api/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-primary hover:underline inline-flex items-center gap-0.5"
+            >
+              Invidious API Docs <ExternalLink className="w-2.5 h-2.5" />
+            </a>
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Stream audio via Invidious API (GET /api/v1/videos/:id) with ad-free adaptive audio formats.
+          </p>
+        </div>
+        <Select<'invidious' | 'native'>
+          value={settings.audioStreamSource}
+          options={[
+            { value: 'invidious', label: 'Invidious API' },
+            { value: 'native', label: 'Native YouTube' },
+          ]}
+          onChange={(v) => setSetting('audioStreamSource', v)}
+        />
+      </div>
+
+      {settings.audioStreamSource === 'invidious' && (
+        <div className="pt-3 border-t border-border/40 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex-1">
+              <label className="text-xs font-medium text-foreground block">Invidious Instance URL</label>
+              <p className="text-[11px] text-muted-foreground">Self-hosted or public Invidious instance endpoint</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={settings.invidiousInstanceUrl}
+                onChange={(e) => setSetting('invidiousInstanceUrl', e.target.value)}
+                placeholder="https://inv.nadeko.net"
+                className="bg-secondary text-foreground text-xs rounded-lg px-3 py-1.5 outline-none border border-border w-56 focus:ring-1 focus:ring-primary/20"
+              />
+              <button
+                onClick={handleTest}
+                disabled={testStatus.testing}
+                className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center gap-1"
+              >
+                {testStatus.testing ? <RefreshCw className="w-3 h-3 animate-spin" /> : 'Test'}
+              </button>
+            </div>
+          </div>
+
+          {testStatus.result && (
+            <div className={`text-xs px-3 py-2 rounded-xl ${testStatus.result.ok ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+              {testStatus.result.ok
+                ? `✓ Instance Online: ${testStatus.result.latencyMs}ms response time (${testStatus.result.version})`
+                : `✗ Instance Unreachable: ${testStatus.result.error}`}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] text-muted-foreground">Instance Presets:</span>
+            {KNOWN_INVIDIOUS_INSTANCES.slice(0, 5).map((inst) => (
+              <button
+                key={inst}
+                onClick={() => setSetting('invidiousInstanceUrl', inst)}
+                className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
+                  settings.invidiousInstanceUrl === inst
+                    ? 'bg-primary/20 text-primary border-primary/40'
+                    : 'bg-secondary/60 text-muted-foreground border-border/40 hover:text-foreground'
+                }`}
+              >
+                {inst.replace('https://', '')}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex-1 pr-4">
+              <p className="text-xs font-medium text-foreground">Auto-fallback to Native YouTube</p>
+              <p className="text-[11px] text-muted-foreground">Seamlessly fall back to native stream extractor if Invidious instance is unreachable or rate-limited</p>
+            </div>
+            <Toggle
+              checked={settings.invidiousFallbackToNative}
+              onChange={(v) => setSetting('invidiousFallbackToNative', v)}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function YouTubeMusicSettings() {
+  const { account, cookie, isLoading, setCookie, logout, loadAccount } = useAccountStore();
+  const [cookieInput, setCookieInput] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="font-display font-semibold text-base mb-1">YouTube Music Account</h2>
+        <p className="text-xs text-muted-foreground">
+          Sign in via cookie-paste to access your personal YouTube Music library, liked songs, custom playlists, and write actions.
+        </p>
+      </div>
+
+      {account?.signedIn ? (
+        <div className="p-4 rounded-2xl bg-secondary/40 border border-border/60 space-y-3">
+          <div className="flex items-center gap-3">
+            {account.thumbnail ? (
+              <img src={account.thumbnail} alt="" className="w-12 h-12 rounded-full object-cover shadow-md" />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-base">
+                {account.name?.[0] || 'U'}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-foreground text-sm truncate">{account.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{account.handle || account.email || 'Connected'}</p>
+            </div>
+            <button
+              onClick={() => { loadAccount(); toast.success('Synchronized with YouTube Music'); }}
+              className="p-2 rounded-xl glass-subtle text-xs hover:bg-accent/40 text-muted-foreground hover:text-foreground"
+              title="Sync Account"
+            >
+              <RefreshCw size={14} />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+            <button
+              onClick={() => { setCookieInput(cookie); setIsEditing(!isEditing); }}
+              className="px-3 py-1.5 rounded-xl glass-subtle text-xs font-medium text-foreground hover:bg-accent/50"
+            >
+              <Key size={12} className="inline mr-1.5" />
+              {isEditing ? 'Cancel Edit' : 'Change Cookie'}
+            </button>
+            <button
+              onClick={logout}
+              className="px-3 py-1.5 rounded-xl text-xs font-medium text-destructive hover:bg-destructive/10 ml-auto"
+            >
+              <LogOut size={12} className="inline mr-1.5" />
+              Sign Out
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 rounded-2xl bg-secondary/20 border border-border/50 text-xs space-y-3">
+          <div className="flex items-center gap-2 text-foreground font-semibold">
+            <LogIn size={15} className="text-red-500" />
+            <span>Connect YouTube Music Account</span>
+          </div>
+          <p className="text-muted-foreground text-[11px] leading-relaxed">
+            Streams and ad-free playback work instantly without signing in. To sync your library, liked tracks, and write playlists, paste your YouTube cookie below.
+          </p>
+        </div>
+      )}
+
+      {(!account?.signedIn || isEditing) && (
+        <div className="p-4 rounded-2xl glass-card space-y-3 border border-border/60">
+          <label className="text-xs font-medium text-foreground block">
+            YouTube Music Cookie:
+          </label>
+          <textarea
+            rows={3}
+            value={cookieInput}
+            onChange={e => setCookieInput(e.target.value)}
+            placeholder="SAPISID=...; __Secure-3PAPISID=...; SID=..."
+            className="w-full bg-secondary/80 text-foreground text-xs rounded-xl p-3 border border-border font-mono outline-none focus:ring-1 focus:ring-primary/40"
+          />
+          <div className="flex items-center justify-between">
+            <a
+              href="https://music.youtube.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+            >
+              Open music.youtube.com <ExternalLink size={10} />
+            </a>
+            <button
+              onClick={async () => {
+                if (!cookieInput.trim()) return;
+                const ok = await setCookie(cookieInput.trim());
+                if (ok) {
+                  toast.success('Connected to YouTube Music!');
+                  setIsEditing(false);
+                  setCookieInput('');
+                } else {
+                  toast.error('Could not verify cookie with YouTube');
+                }
+              }}
+              disabled={isLoading}
+              className="px-4 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity"
+            >
+              {isLoading ? 'Verifying...' : 'Save & Connect'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+

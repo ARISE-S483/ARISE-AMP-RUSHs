@@ -59,47 +59,21 @@ async function matchTrack(title: string, artist?: string): Promise<Track | null>
   }
 }
 
-/** Import from YouTube via Piped API */
+/** Import from YouTube via native InnerTube API */
 async function importYouTube(playlistId: string, onProgress: ProgressCallback): Promise<{ name: string; tracks: Track[] }> {
-  // Use a public Piped instance to fetch YouTube playlist
-  const pipedInstances = [
-    'https://pipedapi.kavin.rocks',
-    'https://pipedapi.adminforge.de',
-    'https://api.piped.projectsegfau.lt',
-  ];
+  onProgress({ total: 1, matched: 0, current: 0, status: 'parsing', playlistName: 'Fetching playlist...' });
 
-  let playlistData: Record<string, unknown> | null = null;
-
-  for (const instance of pipedInstances) {
-    try {
-      const res = await fetch(`${instance}/playlists/${playlistId}`);
-      if (res.ok) {
-        playlistData = await res.json();
-        break;
-      }
-    } catch { continue; }
+  const playlist = await musicAPI.getPlaylist(playlistId);
+  if (!playlist || !playlist.tracks) {
+    throw new Error('Could not fetch YouTube playlist');
   }
 
-  if (!playlistData) throw new Error('Could not fetch YouTube playlist');
+  const name = playlist.title || 'YouTube Import';
+  const playlistTracks = playlist.tracks;
 
-  const name = (playlistData.name as string) || 'YouTube Import';
-  const relatedStreams = (playlistData.relatedStreams as Record<string, unknown>[]) || [];
+  onProgress({ total: playlistTracks.length, matched: playlistTracks.length, current: playlistTracks.length, status: 'done', playlistName: name });
 
-  onProgress({ total: relatedStreams.length, matched: 0, current: 0, status: 'matching', playlistName: name });
-
-  const tracks: Track[] = [];
-  for (let i = 0; i < relatedStreams.length; i++) {
-    const stream = relatedStreams[i];
-    const streamTitle = (stream.title as string) || '';
-    const uploaderName = (stream.uploaderName as string)?.replace(/ - Topic$/i, '') || '';
-
-    const matched = await matchTrack(streamTitle, uploaderName);
-    if (matched) tracks.push(matched);
-
-    onProgress({ total: relatedStreams.length, matched: tracks.length, current: i + 1, status: 'matching', playlistName: name });
-  }
-
-  return { name, tracks };
+  return { name, tracks: playlistTracks };
 }
 
 /** Import from Spotify via Official API */

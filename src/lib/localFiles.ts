@@ -2,8 +2,8 @@ import { parseAudioMetadata } from './taglib';
 import type { Track } from '@/api/types';
 
 export async function parseLocalAudioFiles(files: FileList | File[]): Promise<Track[]> {
-  const tracks: Track[] = [];
-  const fileArray = Array.from(files).filter(f => f.type.startsWith('audio/') || f.name.endsWith('.flac'));
+  const audioExtensions = /\.(mp3|wav|ogg|flac|m4a|aac|opus|weba|wma|aiff)$/i;
+  const fileArray = Array.from(files).filter(f => f.type.startsWith('audio/') || audioExtensions.test(f.name));
 
   for (let i = 0; i < fileArray.length; i++) {
     const file = fileArray[i];

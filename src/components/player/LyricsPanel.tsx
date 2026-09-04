@@ -60,8 +60,9 @@ export function LyricsPanel() {
 
     const albumName = currentTrack.album?.title;
     const duration = currentTrack.duration;
+    const videoId = currentTrack.videoId;
 
-    musicAPI.getLyrics(currentTrack.title, currentTrack.artist.name, albumName, duration).then(result => {
+    musicAPI.getLyrics(currentTrack.title, currentTrack.artist.name, albumName, duration, videoId).then(result => {
       if (result) { setLyrics(result.lines); setSynced(result.synced); setSource(result.source); }
       else setError('No lyrics found');
       setLoading(false);
