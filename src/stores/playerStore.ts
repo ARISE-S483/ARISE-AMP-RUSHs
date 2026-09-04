@@ -4,6 +4,7 @@ import { equalizer } from '../api/equalizer';
 // hifiAPI no longer used directly — streaming goes through musicAPI → monochrome bridge
 import { musicAPI } from '@/api/musicAPI';
 import { lastfmClient } from '@/api/lastfmClient';
+import { ytifyClient } from '@/api/ytifyClient';
 import type { Track, RepeatMode } from '@/api/types';
 import { useSettingsStore } from './settingsStore';
 import { toast } from '@/hooks/use-toast';
@@ -54,6 +55,7 @@ interface PlayerState {
   cycleRepeat: () => void;
   addToQueue: (track: Track) => void;
   addNextToQueue: (track: Track) => void;
+  addSimilarToQueue: (track?: Track) => Promise<void>;
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
   reorderQueue: (from: number, to: number) => void;
@@ -386,6 +388,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         const currentState = get();
         preloadNextTracks(currentState.queue, currentState.queueIndex);
 
+        // Auto-buffer Up Next queue based on song if queue has <= 2 tracks (matching ytify)
+        if (currentState.queue.length <= currentState.queueIndex + 2) {
+          loadRecommendations(get, set);
+        }
+
         const { addToRecentlyPlayed } = await import('./libraryStore');
         addToRecentlyPlayed(track);
         lastfmClient.updateNowPlaying(track);
@@ -408,6 +415,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
             set({ isPlaying: true, isLoading: false, duration: track.duration || 0 });
             saveQueueState({ ...get() });
             preloadNextTracks(get().queue, get().queueIndex);
+            if (get().queue.length <= get().queueIndex + 2) {
+              loadRecommendations(get, set);
+            }
             const { addToRecentlyPlayed } = await import('./libraryStore');
             addToRecentlyPlayed(track);
             lastfmClient.updateNowPlaying(track);
@@ -600,6 +610,56 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     saveQueueState({ ...get() });
   },
 
+  addSimilarToQueue: async (track) => {
+    const target = track || get().currentTrack;
+    if (!target) return;
+
+    toast({
+      title: 'Finding similar tracks...',
+      description: `Searching songs similar to "${target.title}" (ytify)`,
+    });
+
+    try {
+      const artistName = typeof target.artist === 'string' ? target.artist : target.artist?.name || '';
+      const similar = await ytifyClient.getSimilar(target.title, artistName, 10);
+
+      const { queue } = get();
+      const existingIds = new Set(queue.map(t => String(t.id)));
+      const cleanTitleMap = new Set(queue.map(t => (t.title || '').toLowerCase().trim()));
+
+      const toAdd = similar.filter(t => {
+        const vid = t.videoId || String(t.id);
+        const title = (t.title || '').toLowerCase().trim();
+        if (existingIds.has(vid)) return false;
+        if (title && cleanTitleMap.has(title)) return false;
+        cleanTitleMap.add(title);
+        return true;
+      });
+
+      if (toAdd.length > 0) {
+        const newQueue = [...queue, ...toAdd];
+        set({ queue: newQueue });
+        saveQueueState({ ...get() });
+        preloadNextTracks(newQueue, get().queueIndex);
+        toast({
+          title: 'Queue updated',
+          description: `Added ${toAdd.length} songs similar to "${target.title}" to Up Next`,
+        });
+      } else {
+        toast({
+          title: 'Up Next',
+          description: `Similar songs already in queue`,
+        });
+      }
+    } catch (e: any) {
+      toast({
+        title: 'Could not fetch similar songs',
+        description: e?.message || 'Error searching ytify recommendations',
+        variant: 'destructive',
+      });
+    }
+  },
+
   removeFromQueue: (index) => {
     const { queue, queueIndex } = get();
     set({
@@ -759,7 +819,17 @@ async function loadRecommendations(
         }).slice(0, 20);
       } catch { /* continue */ }
 
-    // 2. Fallback: musicAPI.getTrackRecommendations (Deezer → Spotify chain)
+    // 2. High fidelity ytify similar content fallback (matching n-ce/ytify getSimilar)
+    if (newTracks.length < 5) {
+      try {
+        const artistName = typeof currentTrack.artist === 'string' ? currentTrack.artist : currentTrack.artist?.name || '';
+        const similar = await ytifyClient.getSimilar(currentTrack.title, artistName, 10);
+        const additional = similar.filter(t => !existingIds.has(String(t.id)) && !newTracks.some(n => String(n.id) === String(t.id)));
+        newTracks.push(...additional.slice(0, 10));
+      } catch { /* continue */ }
+    }
+
+    // 3. Fallback: musicAPI.getTrackRecommendations (Deezer → Spotify chain)
     if (newTracks.length < 3) {
       try {
         const related = await musicAPI.getTrackRecommendations(currentTrack);

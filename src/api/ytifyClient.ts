@@ -210,6 +210,145 @@ class YtifyClient {
     return [];
   }
 
+  // Get similar tracks matching n-ce/ytify src/backend/getSimilar.ts
+  async getSimilar(title: string, artist: string, limit: number = 10): Promise<Track[]> {
+    if (!title || !artist) return [];
+
+    const cleanArtist = artist.replace(/ - Topic$/, '').trim();
+    const targetUrl = `${this.apiBase}/similar?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(cleanArtist)}&limit=${limit}`;
+
+    let data: any = null;
+
+    // 1. Direct fetch
+    try {
+      const res = await fetch(targetUrl, {
+        headers: { 'Accept': 'application/json', 'Origin': 'https://ytify.pp.ua' },
+        signal: AbortSignal.timeout(4000),
+      });
+      if (res.ok) {
+        data = await res.json();
+      }
+    } catch {
+      // Fallback
+    }
+
+    // 2. Fallback via /api/cors-proxy
+    if (!Array.isArray(data)) {
+      try {
+        const proxyRes = await fetch(`/api/cors-proxy?url=${encodeURIComponent(targetUrl)}`, {
+          signal: AbortSignal.timeout(6000),
+        });
+        if (proxyRes.ok) {
+          data = await proxyRes.json();
+        }
+      } catch {
+        // Fallback failed
+      }
+    }
+
+    if (Array.isArray(data)) {
+      return data.map((item: any) => this.itemToTrack(item));
+    }
+
+    return [];
+  }
+
+  // Get recommended videos matching n-ce/ytify enqueueRelatedStreams.ts
+  async getRecommendedVideos(videoId: string): Promise<Track[]> {
+    if (!videoId) return [];
+
+    const instances = [
+      'https://yt.omada.cafe',
+      'https://invidious.schenkel.eti.br',
+      'https://invidious.kemonomimi.nl'
+    ];
+
+    for (const inst of instances) {
+      try {
+        const targetUrl = `${inst}/api/v1/videos/${encodeURIComponent(videoId)}`;
+        let data: any = null;
+
+        try {
+          const res = await fetch(targetUrl, {
+            headers: { 'Accept': 'application/json' },
+            signal: AbortSignal.timeout(3000),
+          });
+          if (res.ok) data = await res.json();
+        } catch {}
+
+        if (!data || !Array.isArray(data.recommendedVideos)) {
+          try {
+            const proxyRes = await fetch(`/api/cors-proxy?url=${encodeURIComponent(targetUrl)}`, {
+              signal: AbortSignal.timeout(5000),
+            });
+            if (proxyRes.ok) data = await proxyRes.json();
+          } catch {}
+        }
+
+        if (data && Array.isArray(data.recommendedVideos)) {
+          // Filter matching ytify enqueueRelatedStreams: lengthSeconds > 45, music tracks
+          const filtered = data.recommendedVideos.filter((v: any) => {
+            const sec = Number(v.lengthSeconds) || 0;
+            return sec > 45;
+          });
+
+          return filtered.map((v: any) => {
+            const vid = v.videoId || v.id;
+            const duration = Number(v.lengthSeconds) || 0;
+            const thumb = v.videoThumbnails?.[0]?.url || (vid ? `https://i.ytimg.com/vi/${vid}/hqdefault.jpg` : '');
+            return {
+              id: `ytm_${vid}`,
+              videoId: vid,
+              title: v.title,
+              artist: { id: 0, name: (v.author || '').replace(/ - Topic$/, '').trim() || 'Unknown Artist' },
+              duration,
+              thumbnail: thumb,
+              thumbnailLarge: thumb,
+              source: 'youtube' as const,
+              type: 'track' as const,
+            };
+          });
+        }
+      } catch {}
+    }
+
+    return [];
+  }
+
+  // Combine similar + recommended for robust Up Next based on track (ytify)
+  async getUpNexts(track: Track, limit: number = 15): Promise<Track[]> {
+    const videoId = track.videoId || (typeof track.id === 'string' ? track.id.replace('ytm_', '').replace('YT:', '') : String(track.id));
+    const title = track.title;
+    const artistName = typeof track.artist === 'string' ? track.artist : track.artist?.name || '';
+
+    // Fetch both sources in parallel
+    const [similar, recommended] = await Promise.all([
+      title && artistName ? this.getSimilar(title, artistName, limit).catch(() => []) : Promise.resolve([]),
+      videoId ? this.getRecommendedVideos(videoId).catch(() => []) : Promise.resolve([]),
+    ]);
+
+    const seenIds = new Set<string>();
+    const seenTitles = new Set<string>();
+    if (videoId) seenIds.add(videoId);
+    if (title) seenTitles.add(title.toLowerCase().trim());
+
+    const result: Track[] = [];
+
+    for (const t of [...similar, ...recommended]) {
+      const vid = t.videoId || String(t.id).replace('ytm_', '');
+      const tTitle = (t.title || '').toLowerCase().trim();
+      if (!vid || seenIds.has(vid)) continue;
+      if (tTitle && seenTitles.has(tTitle)) continue;
+
+      seenIds.add(vid);
+      if (tTitle) seenTitles.add(tTitle);
+      result.push(t);
+      if (result.length >= limit) break;
+    }
+
+    return result;
+  }
+
   // Audio Stream via n-ce/ytify architecture (direct https://yt.omada.cafe/videoplayback?... playback)
   async getStreamDetails(track: Track): Promise<StreamDetails | null> {
     const videoId = track.videoId || (typeof track.id === 'string' ? track.id.replace('YT:', '') : String(track.id));

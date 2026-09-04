@@ -7,7 +7,7 @@ import type { Track } from '@/api/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, ListPlus, ListMusic, Heart, Download,
-  Plus, FolderPlus, Radio
+  Plus, FolderPlus, Radio, Sparkles
 } from 'lucide-react';
 
 interface ContextMenuState {
@@ -35,6 +35,7 @@ export function TrackContextMenu({ children }: TrackContextMenuProps) {
   const play = usePlayerStore(s => s.play);
   const addToQueue = usePlayerStore(s => s.addToQueue);
   const addNextToQueue = usePlayerStore(s => s.addNextToQueue);
+  const addSimilarToQueue = usePlayerStore(s => s.addSimilarToQueue);
   const enableRadio = usePlayerStore(s => s.enableRadio);
   const { addToFavorites, removeFromFavorites, isFavorite, playlists, createPlaylist, addToPlaylist } = useLibraryStore();
 
@@ -158,10 +159,16 @@ export function TrackContextMenu({ children }: TrackContextMenuProps) {
     close();
   };
 
+  const handleAddSimilar = () => {
+    addSimilarToQueue(track);
+    close();
+  };
+
   const menuItems = [
     { icon: Play, label: 'Play', action: handlePlay },
     { icon: ListPlus, label: 'Play Next', action: handlePlayNext },
     { icon: Plus, label: 'Add to Queue', action: handleAddToQueue },
+    { icon: Sparkles, label: 'Queue Similar (ytify)', action: handleAddSimilar },
     { divider: true },
     { icon: Heart, label: liked ? 'Remove from Favorites' : 'Add to Favorites', action: handleToggleFavorite, active: liked },
     { icon: FolderPlus, label: 'Add to Playlist', action: () => setShowPlaylists(true) },

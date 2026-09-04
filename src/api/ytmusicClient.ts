@@ -5,6 +5,7 @@
 import { APICache } from './cache';
 import type { Track, Artist, Album, Playlist, SearchResults, Lyrics } from './types';
 import { fetchLrcLibLyrics } from '@/lib/lrclib';
+import { ytifyClient } from './ytifyClient';
 
 // ========== Helpers ==========
 
@@ -109,7 +110,14 @@ class YTMusicClient {
   // ========== Normalizers ==========
 
   private songToTrack(item: Record<string, unknown>): Track {
-    const videoId = String(item.videoId || item.video_id || item.id || '');
+    const videoId = String(
+      item.videoId ||
+      item.video_id ||
+      (item.endpoint as any)?.payload?.videoId ||
+      (item.navigationEndpoint as any)?.watchEndpoint?.videoId ||
+      item.id ||
+      ''
+    );
     const title = textOf(item.name ?? item.title ?? item.song);
 
     let artistName = 'Unknown Artist';
@@ -518,21 +526,56 @@ class YTMusicClient {
 
   async getUpNexts(track: Track): Promise<Track[]> {
     const videoId = track.videoId || this.videoIdOf(track.id);
-    if (!videoId) return [];
-    const cacheKey = `upnext:${videoId}`;
+    const cacheKey = `upnext:${videoId || track.id}`;
     const cached = await this.cache.get<Track[]>('ytup', cacheKey);
     if (cached) return cached;
 
-    try {
-      const data = await this.fetchAPI(`/upnext/${encodeURIComponent(videoId)}`);
-      const check = Array.isArray(data) ? data : [];
-      const tracks = check.filter(i => asRecord(i).videoId).map(i => this.songToTrack(asRecord(i)));
-      await this.cache.set('ytup', cacheKey, tracks);
-      return tracks;
-    } catch (error) {
-      console.warn('[ytmusic] getUpNexts failed:', error);
-      return [];
+    let tracks: Track[] = [];
+
+    if (videoId) {
+      try {
+        const data = await this.fetchAPI(`/upnext/${encodeURIComponent(videoId)}`);
+        const check = Array.isArray(data) ? data : [];
+        tracks = check
+          .filter(i => {
+            const r = asRecord(i);
+            return (
+              r.videoId ||
+              r.video_id ||
+              (r.endpoint as any)?.payload?.videoId ||
+              (r.navigationEndpoint as any)?.watchEndpoint?.videoId ||
+              r.id
+            );
+          })
+          .map(i => this.songToTrack(asRecord(i)));
+      } catch (error) {
+        console.warn('[ytmusic] getUpNexts API failed, trying ytify fallback:', error);
+      }
     }
+
+    // Supplement or fallback using ytify similar & recommended tracks
+    if (tracks.length < 3) {
+      try {
+        const ytifyTracks = await ytifyClient.getUpNexts(track);
+        if (ytifyTracks.length > 0) {
+          const seen = new Set(tracks.map(t => String(t.videoId || t.id)));
+          for (const ytTrack of ytifyTracks) {
+            const id = String(ytTrack.videoId || ytTrack.id);
+            if (!seen.has(id)) {
+              seen.add(id);
+              tracks.push(ytTrack);
+            }
+          }
+        }
+      } catch (ytErr) {
+        console.warn('[ytify] getUpNexts fallback failed:', ytErr);
+      }
+    }
+
+    if (tracks.length > 0) {
+      await this.cache.set('ytup', cacheKey, tracks);
+    }
+    return tracks;
   }
 
   async getTrackRecommendations(track: Track): Promise<Track[]> {
