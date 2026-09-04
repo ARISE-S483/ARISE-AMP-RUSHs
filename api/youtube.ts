@@ -522,7 +522,10 @@ export default async function handler(req: any, res: any) {
         } else {
           return sendError(res, 'No audio streams found.', 404);
         }
+      } catch (streamErr: any) {
+        return sendError(res, streamErr?.message || 'Stream extraction error', 500);
       }
+    }
 
       case 'proxy': {
         const urlQuery = new URL(req.url!, `http://${req.headers.host}`).searchParams.get('url');

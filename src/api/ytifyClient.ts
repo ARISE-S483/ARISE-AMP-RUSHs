@@ -223,17 +223,37 @@ class YtifyClient {
           ? `${proxy}/s/${encodeURIComponent(videoId)}`
           : `${proxy}/api/v1/videos/${encodeURIComponent(videoId)}`;
 
-        const res = await fetch(url, {
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          },
-          signal: AbortSignal.timeout(5000),
-        });
+        let data: any = null;
 
-        if (!res.ok) continue;
+        // 1. Direct fetch (simple request, no forbidden headers)
+        try {
+          const res = await fetch(url, {
+            headers: { 'Accept': 'application/json' },
+            signal: AbortSignal.timeout(4000),
+          });
+          if (res.ok) {
+            data = await res.json();
+          }
+        } catch {
+          // Direct fetch failed
+        }
 
-        const data: any = await res.json();
+        // 2. Fallback via /api/cors-proxy
+        if (!data || (!data.adaptiveFormats && !data.formatStreams)) {
+          try {
+            const proxyRes = await fetch(`/api/cors-proxy?url=${encodeURIComponent(url)}`, {
+              signal: AbortSignal.timeout(6000),
+            });
+            if (proxyRes.ok) {
+              data = await proxyRes.json();
+            }
+          } catch {
+            // Fallback failed
+          }
+        }
+
+        if (!data) continue;
+
         const formats: YtifyStreamFormat[] = data.adaptiveFormats || data.formatStreams || [];
 
         const audioFormats = formats.filter(f => {

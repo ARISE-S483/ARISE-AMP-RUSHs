@@ -4,62 +4,48 @@ export default async function handler(req: any, res: any) {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Range',
     });
     res.end();
     return;
-  }
-
-  function sendJSON(data: unknown, status = 200) {
-    const body = JSON.stringify(data);
-    res.writeHead(status, {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Content-Length': Buffer.byteLength(body),
-    });
-    res.end(body);
   }
 
   try {
     const parsed = new URL(req.url, `http://${req.headers.host}`);
     const targetUrl = parsed.searchParams.get('url');
     if (!targetUrl) {
-      sendJSON({ error: 'Missing "url" query parameter' }, 400);
+      res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.end(JSON.stringify({ error: 'Missing "url" query parameter' }));
       return;
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
     const response = await fetch(targetUrl, {
-      method: 'HEAD',
+      method: req.method || 'GET',
       signal: controller.signal,
-      headers: { 'User-Agent': 'Melodies-HealthCheck/1.0' },
+      headers: {
+        'Accept': 'application/json, */*',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
       redirect: 'follow',
-    }).catch(async () => {
-      // HEAD may not be allowed, try GET
-      return fetch(targetUrl, {
-        method: 'GET',
-        signal: controller.signal,
-        headers: { 'User-Agent': 'Melodies-HealthCheck/1.0' },
-        redirect: 'follow',
-      });
     });
 
     clearTimeout(timeout);
 
-    sendJSON({
-      ok: response.ok,
-      status: response.status,
-      statusText: response.statusText,
-      url: targetUrl,
+    const contentType = response.headers.get('content-type') || 'application/json';
+    const text = await response.text();
+
+    res.writeHead(response.status, {
+      'Content-Type': contentType,
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+      'Cache-Control': 'public, max-age=3600',
     });
+    res.end(text);
   } catch (error: any) {
-    sendJSON({
-      ok: false,
-      status: 0,
-      statusText: error?.message || 'Network error',
-      url: '',
-    });
+    res.writeHead(502, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.end(JSON.stringify({ error: error?.message || 'Proxy request failed' }));
   }
 }
