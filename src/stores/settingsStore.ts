@@ -90,6 +90,16 @@ interface SettingsState {
   showFavorites: boolean;
   showPlaylists: boolean;
 
+  // SimpMusic Core Settings (Mobile & Desktop)
+  savePlaybackState: boolean;
+  saveLastPlayed: boolean;
+  sponsorBlockEnabled: boolean;
+  contentCountry: string;
+  contentLanguage: string;
+  playerCacheSize: string;
+  downloadedCacheSize: string;
+  thumbnailCacheSize: string;
+
   // Actions
   setSetting: <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void;
   resetSettings: () => void;
@@ -163,6 +173,14 @@ const defaultSettings = {
   showRecentlyPlayed: true,
   showFavorites: true,
   showPlaylists: true,
+  savePlaybackState: true,
+  saveLastPlayed: true,
+  sponsorBlockEnabled: false,
+  contentCountry: 'KR',
+  contentLanguage: 'English',
+  playerCacheSize: '0 MB',
+  downloadedCacheSize: '0 MB',
+  thumbnailCacheSize: '2 MB',
 };
 
 function loadSettings(): typeof defaultSettings {

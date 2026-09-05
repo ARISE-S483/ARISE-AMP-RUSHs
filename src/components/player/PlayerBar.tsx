@@ -259,62 +259,60 @@ export function PlayerBar() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 60, opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 350 }}
-              className="fixed z-[55] left-2 right-2 px-1"
-              style={{ bottom: 'calc(var(--bottom-nav-height, 64px) + 6px)' }}
+              className="fixed z-[55] left-2.5 right-2.5 px-0.5"
+              style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 68px)' }}
             >
               <div
-                className="flex items-center gap-3 px-3 py-2 rounded-2xl bg-[#090e1d]/90 backdrop-blur-2xl border border-white/15 shadow-2xl relative overflow-hidden"
+                className="flex items-center gap-3 px-3.5 py-2 rounded-2xl bg-[#141c28]/95 backdrop-blur-2xl border border-white/15 shadow-[0_12px_36px_rgba(0,0,0,0.7)] relative overflow-hidden cursor-pointer select-none"
                 onClick={() => setIsExpanded(true)}
               >
-                <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-muted shadow-sm">
+                {/* Artwork Thumbnail */}
+                <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-white/5 shadow-md border border-white/10">
                   {currentTrack.thumbnail ? (
                     <img src={currentTrack.thumbnail} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      <Disc3 size={18} />
+                    <div className="w-full h-full flex items-center justify-center text-white/40">
+                      <Disc3 size={20} />
                     </div>
                   )}
                 </div>
 
+                {/* Track Metadata (Matching Image 4: KHÔNG THỂ SAY / HIEUTHUHAI) */}
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-white truncate">{currentTrack.title}</p>
-                  <p className="text-xs text-white/60 truncate mt-0.5">{currentTrack.artist?.name}</p>
+                  <p className="text-sm font-bold text-white tracking-tight truncate">{currentTrack.title}</p>
+                  <p className="text-xs text-white/60 truncate mt-0.5">{currentTrack.artist?.name || 'Unknown Artist'}</p>
                 </div>
 
-                <div className="flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
+                {/* Actions: Heart + Play/Pause */}
+                <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                   <button
                     onClick={handleLike}
-                    className={`p-2 transition-transform ${justLiked ? 'animate-heart-pop' : ''}`}
+                    className={`p-2 rounded-xl text-white/70 hover:text-white transition-transform active:scale-90 ${justLiked ? 'animate-heart-pop' : ''}`}
                     onAnimationEnd={() => setJustLiked(false)}
                     aria-label="Like"
                   >
-                    <Heart size={18} className={liked ? 'fill-[#FF4081] text-[#FF4081]' : 'text-white/60'} />
+                    <Heart size={20} className={liked ? 'fill-[#FF4081] text-[#FF4081]' : 'text-white/70'} />
                   </button>
+
                   <button
                     onClick={togglePlayPause}
-                    className="w-10 h-10 rounded-full bg-gradient-to-r from-sky-400 to-cyan-300 text-slate-950 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md mx-0.5"
+                    className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/15 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all mx-0.5"
                     aria-label={isPlaying ? 'Pause' : 'Play'}
                   >
                     {isLoading ? (
-                      <Loader2 size={18} className="animate-spin text-slate-950" />
+                      <Loader2 size={18} className="animate-spin text-white" />
                     ) : isPlaying ? (
                       <Pause size={18} fill="currentColor" />
                     ) : (
                       <Play size={18} fill="currentColor" className="ml-0.5" />
                     )}
                   </button>
-                  <button
-                    onClick={next}
-                    className="p-2 text-white/60 hover:text-white transition-colors"
-                    aria-label="Next"
-                  >
-                    <SkipForward size={18} fill="currentColor" />
-                  </button>
                 </div>
 
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/10">
+                {/* Slim Bottom Progress Line (Matching Image 4) */}
+                <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-white/10">
                   <div
-                    className="h-full bg-gradient-to-r from-sky-400 to-cyan-300 transition-[width] duration-100 ease-linear"
+                    className="h-full bg-gradient-to-r from-sky-400 via-cyan-300 to-sky-300 transition-[width] duration-150 ease-linear"
                     style={{ width: `${seekPct}%` }}
                   />
                 </div>
@@ -365,7 +363,7 @@ export function PlayerBar() {
                 </span>
               )}
 
-              {(isRadioEnabled || (currentTrack as any).autoplay) && (
+              {(isRadioEnabled || ('autoplay' in currentTrack && Boolean((currentTrack as Record<string, unknown>).autoplay))) && (
                 <span className="shrink-0 text-sky-400" title="Playing from AutoMix Radio">
                   <InfinityIcon size={14} />
                 </span>

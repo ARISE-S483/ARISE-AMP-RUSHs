@@ -1,13 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings, Volume2, Download, Palette, Music, Mic2, Activity,
-  LayoutDashboard, RotateCcw, ChevronRight, Radio, Brush, Database, Upload, FolderDown,
+  LayoutDashboard, RotateCcw, ChevronRight, ChevronLeft, Radio, Brush, Database, Upload, FolderDown,
   User, Headphones, Music2, Key, LogIn, LogOut, RefreshCw, ExternalLink,
   Info, Sparkles, Sliders, Check
 } from 'lucide-react';
 import { SimpLogo } from '@/components/common/SimpLogo';
 import { EQStudio } from '../components/settings/EQStudio';
+import { EqualizerModal } from '@/components/player/EqualizerModal';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { exportLibrary, importLibrary } from '@/lib/syncExport';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useThemeStore, applyTheme } from '@/stores/themeStore';
@@ -192,6 +195,303 @@ export default function SettingsPage() {
         });
     }
   }, [lastfm, toast]);
+
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const [showEqModal, setShowEqModal] = useState(false);
+  const [mobileShowAdvanced, setMobileShowAdvanced] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleBackupExport = async () => {
+    try {
+      await exportLibrary();
+      toast({ title: 'Backup Saved', description: 'Your library and settings were downloaded' });
+    } catch {
+      toast({ title: 'Backup Failed', description: 'Could not export data', variant: 'destructive' });
+    }
+  };
+
+  const handleBackupImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      await importLibrary(file);
+      toast({ title: 'Restore Complete', description: 'Playlists and settings restored' });
+      setTimeout(() => window.location.reload(), 800);
+    } catch {
+      toast({ title: 'Restore Failed', description: 'Invalid backup JSON file', variant: 'destructive' });
+    }
+  };
+
+  if (isMobile && !mobileShowAdvanced) {
+    return (
+      <div className="bg-black min-h-screen text-white px-4 py-3 select-none pb-40">
+        {/* Hidden File Input for Data Restore */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          className="hidden"
+          onChange={handleBackupImport}
+        />
+
+        {/* ─── Top Bar: < Settings (Image 2 & 3) ─── */}
+        <div className="flex items-center justify-between pb-3.5 border-b border-white/10 mb-5">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2.5 text-white hover:text-white/80 active:scale-95 transition-all"
+          >
+            <ChevronLeft size={24} className="text-white" />
+            <span className="text-xl font-bold tracking-tight text-white">Settings</span>
+          </button>
+
+          <button
+            onClick={() => setMobileShowAdvanced(true)}
+            className="text-xs text-sky-400 hover:text-sky-300 font-semibold px-3 py-1 rounded-full bg-white/5 border border-white/10"
+          >
+            All Tabs
+          </button>
+        </div>
+
+        {/* ─── SimpMusic Mobile Categories (Matching Images 2 & 3) ─── */}
+        <div className="space-y-7">
+          {/* 1. Content */}
+          <div className="space-y-3.5">
+            <h3 className="text-base font-bold text-white tracking-tight">Content</h3>
+            <div className="space-y-3">
+              <div
+                onClick={() => toast({ title: 'Log in', description: 'Log in is available via custom YouTube credentials in All Tabs view' })}
+                className="cursor-pointer active:opacity-70 transition-opacity"
+              >
+                <p className="text-sm font-medium text-white">Log in</p>
+                <p className="text-xs text-white/50 mt-0.5">Log in to get personally data</p>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-white">Language</p>
+                <select
+                  value={settings.contentLanguage || 'English'}
+                  onChange={e => setSetting('contentLanguage', e.target.value)}
+                  className="mt-0.5 bg-transparent text-xs text-white/70 outline-none cursor-pointer"
+                >
+                  <option value="English" className="bg-[#121212] text-white">English</option>
+                  <option value="Tiếng Việt" className="bg-[#121212] text-white">Tiếng Việt</option>
+                  <option value="한국어" className="bg-[#121212] text-white">한국어</option>
+                  <option value="日本語" className="bg-[#121212] text-white">日本語</option>
+                </select>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-white">Content Country</p>
+                <select
+                  value={settings.contentCountry || 'KR'}
+                  onChange={e => setSetting('contentCountry', e.target.value)}
+                  className="mt-0.5 bg-transparent text-xs text-white/70 outline-none cursor-pointer"
+                >
+                  <option value="KR" className="bg-[#121212] text-white">KR</option>
+                  <option value="VN" className="bg-[#121212] text-white">VN</option>
+                  <option value="US" className="bg-[#121212] text-white">US</option>
+                  <option value="JP" className="bg-[#121212] text-white">JP</option>
+                  <option value="GB" className="bg-[#121212] text-white">GB</option>
+                </select>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-white">Quality</p>
+                <p className="text-xs text-white/50 mt-0.5">High - 129kps</p>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-white">Streaming data provider (Piped)</p>
+                <p className="text-xs text-white/50 mt-0.5">pipedapi-libre.kavin.rocks</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Audio */}
+          <div className="space-y-3.5">
+            <h3 className="text-base font-bold text-white tracking-tight">Audio</h3>
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-white">Normalize Volume</p>
+                  <p className="text-xs text-white/50 mt-0.5">Balance media loudness</p>
+                </div>
+                <Toggle
+                  checked={settings.loudnessNormalization}
+                  onChange={v => setSetting('loudnessNormalization', v)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-white">Skip Silent</p>
+                  <p className="text-xs text-white/50 mt-0.5">Skip no music part</p>
+                </div>
+                <Toggle
+                  checked={settings.silenceRemoval}
+                  onChange={v => setSetting('silenceRemoval', v)}
+                />
+              </div>
+
+              <div
+                onClick={() => setShowEqModal(true)}
+                className="cursor-pointer active:opacity-70 transition-opacity"
+              >
+                <p className="text-sm font-medium text-white">Open system equalizer</p>
+                <p className="text-xs text-white/50 mt-0.5">Use your system equalizer</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Playback */}
+          <div className="space-y-3.5">
+            <h3 className="text-base font-bold text-white tracking-tight">Playback</h3>
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-white">Save Playback State</p>
+                  <p className="text-xs text-white/50 mt-0.5">Save shuffle and repeat mode</p>
+                </div>
+                <Toggle
+                  checked={settings.savePlaybackState}
+                  onChange={v => setSetting('savePlaybackState', v)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-white">Save Last Played</p>
+                  <p className="text-xs text-white/50 mt-0.5">Save last played track and queue</p>
+                </div>
+                <Toggle
+                  checked={settings.saveLastPlayed}
+                  onChange={v => setSetting('saveLastPlayed', v)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 4. SponsorBlock */}
+          <div className="space-y-3.5">
+            <h3 className="text-base font-bold text-white tracking-tight">SponsorBlock</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-white">Enable SponsorBlock</p>
+                  <p className="text-xs text-white/50 mt-0.5">Skip sponsor part of video</p>
+                </div>
+                <Toggle
+                  checked={settings.sponsorBlockEnabled}
+                  onChange={v => setSetting('sponsorBlockEnabled', v)}
+                />
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-white">Select skip-segment behavior</p>
+                <p className="text-xs text-white/50 mt-0.5">What segments will be skipped</p>
+              </div>
+
+              <div className="text-[11px] text-white/45 space-y-1 bg-white/[0.03] p-3 rounded-2xl border border-white/5 leading-relaxed">
+                <p>SponsorBlock is a crowd-sourced system for skipping annoying parts of YouTube videos.</p>
+                <p>
+                  More information:{' '}
+                  <a
+                    href="https://sponsor.ajay.app/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sky-400 underline"
+                  >
+                    https://sponsor.ajay.app/
+                  </a>
+                </p>
+                <p>In SimpMusic, SponsorBlock is only available when the device is online</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Storage */}
+          <div className="space-y-3.5">
+            <h3 className="text-base font-bold text-white tracking-tight">Storage</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-white">Player Cache</p>
+                  <p className="text-xs text-white/50 mt-0.5">{settings.playerCacheSize || '0 MB'}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSetting('playerCacheSize', '0 MB');
+                    toast({ title: 'Cache Cleared', description: 'Player cache was cleared' });
+                  }}
+                  className="text-xs text-sky-400 hover:text-sky-300 font-semibold px-2 py-1"
+                >
+                  Clear
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-white">Downloaded Cache</p>
+                  <p className="text-xs text-white/50 mt-0.5">{settings.downloadedCacheSize || '0 MB'}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSetting('downloadedCacheSize', '0 MB');
+                    toast({ title: 'Cache Cleared', description: 'Downloaded cache was cleared' });
+                  }}
+                  className="text-xs text-sky-400 hover:text-sky-300 font-semibold px-2 py-1"
+                >
+                  Clear
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-white">Thumbnail Cache</p>
+                  <p className="text-xs text-white/50 mt-0.5">{settings.thumbnailCacheSize || '2 MB'}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSetting('thumbnailCacheSize', '0 MB');
+                    toast({ title: 'Cache Cleared', description: 'Thumbnail cache was cleared' });
+                  }}
+                  className="text-xs text-sky-400 hover:text-sky-300 font-semibold px-2 py-1"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 6. Backup */}
+          <div className="space-y-3.5">
+            <h3 className="text-base font-bold text-white tracking-tight">Backup</h3>
+            <div className="space-y-3.5">
+              <div
+                onClick={handleBackupExport}
+                className="cursor-pointer active:opacity-70 transition-opacity"
+              >
+                <p className="text-sm font-medium text-white">Backup Your Data</p>
+                <p className="text-xs text-white/50 mt-0.5">Save all your playlist data and settings to a file</p>
+              </div>
+
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="cursor-pointer active:opacity-70 transition-opacity"
+              >
+                <p className="text-sm font-medium text-white">Restore Data</p>
+                <p className="text-xs text-white/50 mt-0.5">Restore playlists and settings from backup file</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* System Equalizer Modal */}
+        <EqualizerModal isOpen={showEqModal} onClose={() => setShowEqModal(false)} />
+      </div>
+    );
+  }
 
   return (
     <motion.div className="p-3 sm:p-5 md:p-6 max-w-5xl mx-auto pb-32 select-none" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
