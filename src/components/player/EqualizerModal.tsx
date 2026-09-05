@@ -110,8 +110,8 @@ export function EqualizerModal({ isOpen, onClose }: EqualizerModalProps) {
           </div>
 
           {/* Equalizer Sliders */}
-          <div className={`py-4 transition-opacity ${enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-            <div className="grid grid-cols-10 gap-2 h-44 items-center px-1">
+          <div className={`py-4 transition-opacity ${enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'} overflow-x-auto scrollbar-thin pb-2`}>
+            <div className="grid grid-cols-10 gap-2 h-44 items-center px-1 min-w-[440px]">
               {FREQUENCIES.map((freq, i) => {
                 const gain = tenBandGains[i] ?? 0;
                 return (
@@ -129,7 +129,8 @@ export function EqualizerModal({ isOpen, onClose }: EqualizerModalProps) {
                         step={0.5}
                         value={gain}
                         onChange={e => handleBandChange(i, parseFloat(e.target.value))}
-                        className="h-28 w-1.5 bg-white/15 rounded-lg appearance-none cursor-pointer accent-sky-400 [writing-mode:vertical-lr] [direction:rtl]"
+                        className="h-28 w-4 bg-white/15 rounded-lg appearance-none cursor-pointer accent-sky-400 [writing-mode:vertical-lr] [direction:rtl] touch-none"
+                        style={{ WebkitAppearance: 'slider-vertical' } as React.CSSProperties}
                       />
                     </div>
 

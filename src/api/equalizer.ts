@@ -372,9 +372,16 @@ export class Equalizer {
     _connectFilters() {
         if (!this.filters.length) return;
 
+        // Connect inputNode to preampNode if available
+        if (this.inputNode && this.preampNode) {
+            this.inputNode.connect(this.preampNode);
+        }
+
         // Connect preamp to first filter
         if (this.preampNode) {
             this.preampNode.connect(this.filters[0]);
+        } else if (this.inputNode) {
+            this.inputNode.connect(this.filters[0]);
         }
 
         // Chain filters together
@@ -383,18 +390,18 @@ export class Equalizer {
         }
 
         // Connect last filter to output
-        this.filters[this.filters.length - 1].connect(this.outputNode);
+        if (this.outputNode) {
+            this.filters[this.filters.length - 1].connect(this.outputNode);
+        }
     }
 
     /**
      * Enable the EQ processing
      */
     _enableFilters() {
-        if (!this.isInitialized || !this.source) return;
-
-        // Note: The actual connection handling is done by the visualizer
-        // This just marks the EQ as enabled
         this.isEnabled = true;
+        this.setAllGains(this.currentGains);
+        this._updatePreampGain();
     }
 
     /**
@@ -402,13 +409,20 @@ export class Equalizer {
      */
     _disableFilters() {
         this.isEnabled = false;
+        const now = this.audioContext?.currentTime || 0;
+        this.filters.forEach(filter => {
+            filter.gain.setTargetAtTime(0, now, 0.02);
+        });
+        if (this.preampNode) {
+            this.preampNode.gain.setTargetAtTime(1.0, now, 0.02);
+        }
     }
 
     /**
      * Get the input node for external connection
      */
     getInputNode() {
-        return this.preampNode || this.filters[0] || null;
+        return this.inputNode || this.preampNode || this.filters[0] || null;
     }
 
     /**
@@ -781,6 +795,20 @@ export class Equalizer {
 
 // Export singleton instance
 export const equalizer = new Equalizer();
+
+// Subscribe to store updates for real-time Web Audio API node synchronization
+useEqualizerStore.subscribe((state) => {
+    if (!equalizer.isInitialized) return;
+    if (state.enabled !== equalizer.isEnabled) {
+        equalizer.toggle(state.enabled);
+    }
+    if (state.enabled) {
+        equalizer.setAllGains(state.gains);
+        equalizer.setPreamp(state.preamp);
+    } else {
+        equalizer._disableFilters();
+    }
+});
 
 // Export helper functions and constants
 export {

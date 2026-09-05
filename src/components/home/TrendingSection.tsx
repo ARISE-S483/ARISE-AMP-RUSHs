@@ -88,7 +88,7 @@ function ArtistCardInline({ artist }: { artist: Artist }) {
     <div
       className="flex-shrink-0 w-[140px] md:w-[160px] cursor-pointer group text-center"
       style={{ scrollSnapAlign: 'start' }}
-      onClick={() => navigate(`/artist/${artist.id}`)}
+      onClick={() => navigate(`/artist/${encodeURIComponent(artist.id || artist.name)}`)}
     >
       <div className="relative aspect-square rounded-full overflow-hidden bg-secondary/50 mb-3 mx-auto shadow-xl ring-2 ring-white/5 group-hover:ring-white/15 transition-all glass-card-elevated" style={{ borderRadius: '9999px' }}>
         <img

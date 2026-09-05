@@ -94,7 +94,7 @@ export const ArtistCard = forwardRef<HTMLDivElement, { artist: Artist }>(functio
       whileHover={{ y: -6, scale: 1.02 }}
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
       className="group cursor-pointer p-4 rounded-2xl glass-card-elevated liquid-glass-card text-center"
-      onClick={() => navigate(`/artist/${artist.id}`)}
+      onClick={() => navigate(`/artist/${encodeURIComponent(artist.id || artist.name)}`)}
     >
       <div className="relative aspect-square rounded-full overflow-hidden bg-secondary/50 mb-3.5 mx-auto max-w-[160px] shadow-xl ring-2 ring-white/5 group-hover:ring-white/15 transition-all duration-300">
         <img

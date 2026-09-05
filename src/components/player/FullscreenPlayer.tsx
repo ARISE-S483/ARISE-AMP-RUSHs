@@ -459,7 +459,24 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
 
       {/* ─── BODY VIEWPORT: Mobile Scrollable Cards Feed (Image 5) OR Desktop/Tablet Dual Pane ─── */}
       {isMobile ? (
-        <div className="relative z-10 flex-1 overflow-y-auto scrollbar-thin px-4 sm:px-6 py-2 space-y-5 select-none">
+        <div className="relative z-10 flex-1 overflow-y-auto scrollbar-thin px-4 sm:px-6 py-2 space-y-5 select-none pb-24">
+          {/* 0. Large Squircle Album Artwork */}
+          <div className="pt-2 flex justify-center">
+            <div className="w-60 h-60 sm:w-72 sm:h-72 aspect-square rounded-[32px] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.85)] border border-white/20 relative group shrink-0">
+              {currentTrack.thumbnail ? (
+                <img
+                  src={currentTrack.thumbnail}
+                  alt={currentTrack.title}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-white/5 text-white/40">
+                  <Disc3 size={64} />
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* 1. Track Title, Artist, Heart (Matching Image 5 Header) */}
           <div className="flex items-start justify-between gap-4 pt-1">
             <div className="min-w-0 flex-1">
@@ -642,7 +659,7 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
               <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-md">
                 {currentTrack.artist?.name || 'Artist'}
               </h3>
-              <p className="text-xs text-white/60">522,000 subscribers</p>
+              <p className="text-xs text-white/60">View artist channel & discography</p>
             </div>
           </div>
 
@@ -1152,9 +1169,8 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
                   onClick={() => {
                     setShowSongMenu(false);
                     onCollapse();
-                    if (currentTrack.artist?.id) {
-                      navigate(`/artist/${currentTrack.artist.id}`);
-                    }
+                    const artistId = currentTrack.artist?.id || currentTrack.artist?.name || 'unknown';
+                    navigate(`/artist/${encodeURIComponent(artistId)}`);
                   }}
                   className="w-full flex items-center gap-4 px-3 py-3 rounded-2xl hover:bg-white/8 active:bg-white/12 transition-colors text-left"
                 >

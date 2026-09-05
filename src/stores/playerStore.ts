@@ -257,15 +257,22 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       loudnessGainNode = ctx.createGain();
       loudnessGainNode.gain.value = 1.0;
       source.connect(loudnessGainNode);
-      
+
       try {
         equalizer.init(ctx, source, state.audioElement);
+        const eqInput = equalizer.getInputNode();
+        const eqOutput = equalizer.getOutputNode();
+        if (eqInput && eqOutput) {
+          loudnessGainNode.connect(eqInput);
+          eqOutput.connect(analyser);
+        } else {
+          loudnessGainNode.connect(analyser);
+        }
       } catch (eqErr) {
         console.warn('EQ init non-fatal:', eqErr);
+        loudnessGainNode.connect(analyser);
       }
-      
-      // Unbroken Audio Graph: Source -> LoudnessGainNode -> Analyser -> Destination
-      loudnessGainNode.connect(analyser);
+
       analyser.connect(ctx.destination);
       set({ audioContext: ctx, analyserNode: analyser });
     } catch (e) {
