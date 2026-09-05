@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Search, Maximize2, Minimize2, Radio, Sparkles, X, Minus, Square } from 'lucide-react';
 import { SimpLogo } from '@/components/common/SimpLogo';
 import { usePlayerStore } from '@/stores/playerStore';
+import { useDeviceType } from '@/hooks/use-mobile';
 import { AccountMenu } from './AccountMenu';
 
 interface CustomTitleBarProps {
@@ -13,6 +14,7 @@ export function CustomTitleBar({ onSearchOpen }: CustomTitleBarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const currentTrack = usePlayerStore(s => s.currentTrack);
+  const deviceType = useDeviceType();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -32,27 +34,27 @@ export function CustomTitleBar({ onSearchOpen }: CustomTitleBarProps) {
   };
 
   return (
-    <header className="h-11 w-full bg-[#080d1a]/85 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-3 select-none z-40 shrink-0 text-white/90">
+    <header className="h-11 w-full bg-[#080d1a]/90 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-3 select-none z-40 shrink-0 text-white/90">
       {/* LEFT: Branding + Navigation History */}
-      <div className="flex items-center gap-3 min-w-[220px]">
+      <div className="flex items-center gap-2 sm:gap-3 sm:min-w-[200px]">
         {/* SimpMusic Brand */}
         <div
           onClick={() => navigate('/')}
-          className="flex items-center gap-2.5 cursor-pointer group px-1.5 py-1 rounded-lg hover:bg-white/5 transition-colors"
+          className="flex items-center gap-2 cursor-pointer group px-1 py-1 rounded-lg hover:bg-white/5 transition-colors"
         >
           <SimpLogo size={24} />
           <div className="flex items-center gap-1.5">
             <span className="font-bold tracking-tight text-sm text-foreground bg-gradient-to-r from-sky-300 via-cyan-200 to-indigo-300 bg-clip-text text-transparent">
               SimpMusic
             </span>
-            <span className="text-[10px] uppercase font-semibold tracking-wider px-1.5 py-0.2 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30">
-              Desktop
+            <span className="text-[10px] uppercase font-semibold tracking-wider px-1.5 py-0.2 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30 capitalize">
+              {deviceType}
             </span>
           </div>
         </div>
 
-        {/* History Navigation */}
-        <div className="flex items-center gap-1 ml-2">
+        {/* History Navigation - Tablet & Desktop */}
+        <div className="hidden sm:flex items-center gap-0.5 ml-1">
           <button
             onClick={() => window.history.back()}
             className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-colors disabled:opacity-40"
@@ -70,25 +72,36 @@ export function CustomTitleBar({ onSearchOpen }: CustomTitleBarProps) {
         </div>
       </div>
 
-      {/* CENTER: Quick Search Input Pill */}
-      <div className="flex-1 max-w-md mx-4">
+      {/* CENTER: Quick Search Input Pill (Tablet & Desktop) / Mobile Search Button */}
+      <div className="flex-1 max-w-md mx-2 sm:mx-4">
+        {/* Mobile search button */}
         <button
           onClick={onSearchOpen}
-          className="w-full h-8 px-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between text-xs text-muted-foreground hover:text-foreground transition-all duration-200 group shadow-inner"
+          className="sm:hidden w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-sky-400 ml-auto"
+          title="Search"
+          aria-label="Search"
+        >
+          <Search size={15} />
+        </button>
+
+        {/* Tablet & Desktop search bar */}
+        <button
+          onClick={onSearchOpen}
+          className="hidden sm:flex w-full h-8 px-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 items-center justify-between text-xs text-muted-foreground hover:text-foreground transition-all duration-200 group shadow-inner"
         >
           <div className="flex items-center gap-2 truncate">
             <Search size={14} className="text-sky-400 group-hover:text-sky-300 transition-colors" />
             <span className="truncate">Search songs, artists, podcasts, albums...</span>
           </div>
-          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono font-medium rounded bg-white/10 text-white/60 border border-white/10">
+          <kbd className="hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono font-medium rounded bg-white/10 text-white/60 border border-white/10">
             <span>Ctrl</span><span>K</span>
           </kbd>
         </button>
       </div>
 
       {/* RIGHT: Status Badges, Quality Badge & Window Actions */}
-      <div className="flex items-center gap-2 min-w-[220px] justify-end">
-        {/* Audio Stream Quality Badge */}
+      <div className="flex items-center gap-1.5 sm:gap-2 sm:min-w-[200px] justify-end">
+        {/* Audio Stream Quality Badge (Tablet & Desktop) */}
         <div
           className="hidden md:flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-500/10 border border-sky-400/20 text-sky-300 text-[11px] font-medium"
           title="High Quality YouTube Music Audio Stream"
@@ -97,7 +110,7 @@ export function CustomTitleBar({ onSearchOpen }: CustomTitleBarProps) {
           <span>256kbps Opus</span>
         </div>
 
-        {/* Listen Together Quick Pill */}
+        {/* Listen Together Quick Pill (Tablet & Desktop) */}
         <button
           onClick={() => navigate('/listen-together')}
           className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
@@ -114,10 +127,10 @@ export function CustomTitleBar({ onSearchOpen }: CustomTitleBarProps) {
         {/* Account Menu */}
         <AccountMenu />
 
-        {/* Fullscreen Toggle */}
+        {/* Fullscreen Toggle (Tablet & Desktop) */}
         <button
           onClick={toggleFullscreen}
-          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-colors ml-1"
+          className="hidden sm:flex w-7 h-7 items-center justify-center rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-colors ml-0.5"
           title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
         >
           {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}

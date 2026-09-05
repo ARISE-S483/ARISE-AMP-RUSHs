@@ -1,56 +1,100 @@
-import { NavLink } from 'react-router-dom';
-import { Compass, Search, Library, User } from 'lucide-react';
+import React from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Home, Compass, BarChart3, Gift, Music2, Search } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-const leftItems = [
-  { to: '/', icon: Compass, label: 'Discover' },
-  { to: '/library', icon: Library, label: 'Library' },
+const mobileTabs = [
+  { to: '/', icon: Home, label: 'Home' },
+  { to: '/explore', icon: Compass, label: 'Explore' },
+  { to: '/analytics', icon: BarChart3, label: 'Analytics' },
+  { to: '/wrapped', icon: Gift, label: 'Wrapped' },
+  { to: '/library', icon: Music2, label: 'Library' },
 ];
 
-const rightItems = [
-  { to: '/search', icon: Search, label: 'Search' },
-  { to: '/settings', icon: User, label: 'Account' },
-];
+interface MobileNavProps {
+  onSearchOpen?: () => void;
+}
 
-const navItems = [
-  ...leftItems,
-  ...rightItems
-];
+/**
+ * SimpMusic Liquid Glass Mobile Bottom Navigation Bar
+ * Faithfully recreating LiquidGlassAppBottomNavigationBar & AppBottomNavigationBar from SimpMusic Android/Mobile
+ * Features:
+ * - Floating glass capsule with backdrop-filter blur & saturation
+ * - Sliding indicator pill behind active tab
+ * - Dedicated floating Search FAB with SimpMusic glow
+ */
+export function MobileNav({ onSearchOpen }: MobileNavProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
 
-export function MobileNav() {
+  const handleSearchClick = () => {
+    if (onSearchOpen) {
+      onSearchOpen();
+    } else {
+      navigate('/search');
+    }
+  };
+
   return (
-    <nav 
-      className="fixed bottom-0 left-0 right-0 z-[60] md:hidden"
-      style={{ 
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        backgroundColor: 'rgba(20, 22, 30, 0.75)',
-        backdropFilter: 'blur(40px)',
-        WebkitBackdropFilter: 'blur(40px)',
-        borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+    <div
+      className="fixed bottom-0 left-0 right-0 z-[60] md:hidden px-3 pointer-events-none flex items-center justify-center gap-2"
+      style={{
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
       }}
     >
-      <div className="flex items-center justify-around h-[64px] px-2">
-        {navItems.map(item => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
-            className="flex-1 flex justify-center"
-          >
-            {({ isActive }) => (
-              <div className="flex flex-col items-center justify-center gap-1.5 py-2">
-                <item.icon 
-                  size={24} 
-                  strokeWidth={isActive ? 2.5 : 2} 
-                  className={isActive ? 'text-white' : 'text-white/40'} 
+      {/* ─── Main Liquid Glass Capsule ─── */}
+      <nav
+        className="pointer-events-auto h-[62px] flex-1 max-w-[340px] rounded-full bg-[#0a1022]/85 backdrop-blur-2xl border border-white/15 shadow-[0_12px_36px_rgba(0,0,0,0.6)] flex items-center justify-around px-2 relative select-none"
+      >
+        {mobileTabs.map(tab => {
+          const isActive = location.pathname === tab.to || (tab.to !== '/' && location.pathname.startsWith(tab.to));
+
+          return (
+            <NavLink
+              key={tab.to}
+              to={tab.to}
+              end={tab.to === '/'}
+              className="relative flex-1 flex flex-col items-center justify-center h-full py-1 group"
+            >
+              {/* Sliding glowing active pill indicator */}
+              {isActive && (
+                <motion.div
+                  layoutId="liquidGlassMobileIndicator"
+                  className="absolute inset-x-1.5 inset-y-1 rounded-full bg-gradient-to-r from-sky-500/25 to-cyan-400/20 border border-sky-400/40 shadow-[0_0_12px_rgba(142,202,230,0.3)]"
+                  transition={{ type: 'spring', stiffness: 450, damping: 30 }}
                 />
-                <span className={`text-[10px] font-medium ${isActive ? 'text-white' : 'text-white/40'}`}>
-                  {item.label}
+              )}
+
+              <div className="relative z-10 flex flex-col items-center justify-center gap-0.5">
+                <tab.icon
+                  size={19}
+                  strokeWidth={isActive ? 2.3 : 1.7}
+                  className={`transition-colors duration-200 ${
+                    isActive ? 'text-sky-300 drop-shadow-[0_0_8px_#8ECAE6]' : 'text-white/50 group-hover:text-white/80'
+                  }`}
+                />
+                <span
+                  className={`text-[10px] font-medium tracking-tight transition-colors duration-200 ${
+                    isActive ? 'text-white font-semibold' : 'text-white/45'
+                  }`}
+                >
+                  {tab.label}
                 </span>
               </div>
-            )}
-          </NavLink>
-        ))}
-      </div>
-    </nav>
+            </NavLink>
+          );
+        })}
+      </nav>
+
+      {/* ─── SimpMusic Floating Search FAB ─── */}
+      <button
+        onClick={handleSearchClick}
+        className="pointer-events-auto w-[54px] h-[54px] rounded-full bg-gradient-to-tr from-sky-500 to-cyan-400 text-slate-950 flex items-center justify-center shadow-[0_8px_24px_rgba(142,202,230,0.45)] border border-sky-300/40 active:scale-95 transition-transform"
+        title="Search"
+        aria-label="Search"
+      >
+        <Search size={22} strokeWidth={2.2} />
+      </button>
+    </div>
   );
 }

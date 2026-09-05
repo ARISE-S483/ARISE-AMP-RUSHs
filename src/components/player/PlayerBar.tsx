@@ -281,7 +281,7 @@ export function PlayerBar() {
                   <p className="text-xs text-white/60 truncate mt-0.5">{currentTrack.artist?.name}</p>
                 </div>
 
-                <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
                   <button
                     onClick={handleLike}
                     className={`p-2 transition-transform ${justLiked ? 'animate-heart-pop' : ''}`}
@@ -292,7 +292,7 @@ export function PlayerBar() {
                   </button>
                   <button
                     onClick={togglePlayPause}
-                    className="w-10 h-10 rounded-full bg-sky-400 text-slate-950 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md ml-1"
+                    className="w-10 h-10 rounded-full bg-gradient-to-r from-sky-400 to-cyan-300 text-slate-950 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md mx-0.5"
                     aria-label={isPlaying ? 'Pause' : 'Play'}
                   >
                     {isLoading ? (
@@ -303,11 +303,18 @@ export function PlayerBar() {
                       <Play size={18} fill="currentColor" className="ml-0.5" />
                     )}
                   </button>
+                  <button
+                    onClick={next}
+                    className="p-2 text-white/60 hover:text-white transition-colors"
+                    aria-label="Next"
+                  >
+                    <SkipForward size={18} fill="currentColor" />
+                  </button>
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/10">
                   <div
-                    className="h-full bg-sky-400 transition-[width] duration-100 ease-linear"
+                    className="h-full bg-gradient-to-r from-sky-400 to-cyan-300 transition-[width] duration-100 ease-linear"
                     style={{ width: `${seekPct}%` }}
                   />
                 </div>
@@ -319,7 +326,7 @@ export function PlayerBar() {
     );
   }
 
-  // ─── Desktop SimpMusic Liquid Glass PlayerBar ───
+  // ─── Desktop & Tablet SimpMusic Liquid Glass PlayerBar ───
   return (
     <>
       <AnimatePresence>
@@ -329,7 +336,7 @@ export function PlayerBar() {
       <footer
         ref={barRef}
         onClick={handleBarClick}
-        className="fixed inset-x-3 bottom-2.5 z-50 h-[76px] rounded-2xl bg-[#090f20]/80 backdrop-blur-2xl border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center px-4 md:px-6 select-none transition-all duration-200"
+        className="fixed left-3 md:left-[84px] right-3 bottom-2.5 z-50 h-[76px] rounded-2xl bg-[#090f20]/80 backdrop-blur-2xl border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center px-4 md:px-6 select-none transition-all duration-200"
       >
         {/* ─── LEFT: Artwork & Track Meta ─── */}
         <div className="min-w-0 flex-1 flex items-center gap-3.5 relative">

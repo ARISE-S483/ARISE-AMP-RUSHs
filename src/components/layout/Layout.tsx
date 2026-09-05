@@ -69,13 +69,13 @@ export function Layout() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Bottom clearance for player bar
+  // Bottom clearance for player bar & navigation
   const bottomPadding = currentTrack
     ? isMobile
-      ? 'pb-[calc(var(--player-height,76px)+var(--bottom-nav-height,64px)+16px)]'
-      : 'pb-[100px]'
+      ? 'pb-36'
+      : 'pb-28'
     : isMobile
-    ? 'pb-[var(--bottom-nav-height,64px)]'
+    ? 'pb-24'
     : 'pb-6';
 
   return (
@@ -130,7 +130,7 @@ export function Layout() {
 
       {/* ===== Body: Sidebar + Main Content Viewport ===== */}
       <div className="flex flex-1 w-full overflow-hidden relative z-10">
-        {/* SimpMusic Desktop Sidebar Navigation Rail */}
+        {/* SimpMusic Desktop & Tablet Sidebar Navigation Rail */}
         {!isMobile && <Sidebar onSearchOpen={handleSearchOpen} />}
 
         {/* Main Content Area */}
@@ -146,7 +146,7 @@ export function Layout() {
       </div>
 
       {/* Mobile Nav if on small screens */}
-      {isMobile && <MobileNav />}
+      {isMobile && <MobileNav onSearchOpen={handleSearchOpen} />}
 
       {/* Floating SimpMusic Player Bar */}
       <PlayerBar />
