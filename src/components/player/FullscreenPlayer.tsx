@@ -42,8 +42,7 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
     repeatMode,
     queue,
     queueIndex,
-    lyrics,
-    sleepTimerMinutes,
+    sleepTimerRemaining,
     togglePlayPause,
     next,
     previous,
@@ -54,8 +53,9 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
     cycleRepeat,
     removeFromQueue,
     clearQueue,
-    playTrack,
+    play,
     setSleepTimer,
+    clearSleepTimer,
   } = usePlayerStore();
 
   const { nowPlayingStyle, setNowPlayingStyle } = useThemeStore();
@@ -73,21 +73,55 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
   const [justLiked, setJustLiked] = useState(false);
   const [activeButtonPress, setActiveButtonPress] = useState<'prev' | 'play' | 'next' | null>(null);
 
+  // Local lyrics fetching state
+  const [lyricsLines, setLyricsLines] = useState<LyricsLine[]>([]);
+  const [lyricsLoading, setLyricsLoading] = useState(false);
+
   const lyricsContainerRef = useRef<HTMLDivElement>(null);
   const activeLyricRef = useRef<HTMLDivElement>(null);
 
-  if (!currentTrack) return null;
+  // Fetch lyrics when track changes
+  useEffect(() => {
+    if (!currentTrack) {
+      setLyricsLines([]);
+      return;
+    }
+    let cancelled = false;
+    setLyricsLoading(true);
+    musicAPI
+      .getLyrics(
+        currentTrack.title,
+        currentTrack.artist?.name || '',
+        currentTrack.album?.title,
+        currentTrack.duration,
+        currentTrack.videoId
+      )
+      .then(res => {
+        if (!cancelled && res?.lines) {
+          setLyricsLines(res.lines);
+        } else if (!cancelled) {
+          setLyricsLines([]);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLyricsLines([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLyricsLoading(false);
+      });
 
-  const liked = isFavorite(String(currentTrack.id));
-  const parsedLyrics: LyricsLine[] = lyrics?.synced && Array.isArray(lyrics.synced) ? lyrics.synced : [];
+    return () => {
+      cancelled = true;
+    };
+  }, [currentTrack?.id]);
 
   // Find active lyrics index
-  const activeLyricIndex = parsedLyrics.findIndex((line, i) => {
-    const nextLine = parsedLyrics[i + 1];
+  const activeLyricIndex = lyricsLines.findIndex((line, i) => {
+    const nextLine = lyricsLines[i + 1];
     return currentTime >= line.time && (!nextLine || currentTime < nextLine.time);
   });
 
-  // Auto-scroll active lyric
+  // Auto-scroll active lyric (called before early return to preserve hook order)
   useEffect(() => {
     if (activeLyricRef.current && (activeTab === 'lyrics' || !isMobile)) {
       activeLyricRef.current.scrollIntoView({
@@ -96,6 +130,11 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
       });
     }
   }, [activeLyricIndex, activeTab, isMobile]);
+
+  // Early return if no track selected (placed after all React hooks)
+  if (!currentTrack) return null;
+
+  const liked = isFavorite(String(currentTrack.id));
 
   const handleLike = () => {
     const videoId = currentTrack.videoId || (String(currentTrack.id).startsWith('ytm_') ? String(currentTrack.id).slice(4) : String(currentTrack.id));
@@ -133,7 +172,7 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
       </div>
 
       <div ref={lyricsContainerRef} className="flex-1 overflow-y-auto scrollbar-thin space-y-6 py-6 pr-2">
-        {parsedLyrics.map((line, idx) => {
+        {lyricsLines.map((line, idx) => {
           const isActive = idx === activeLyricIndex;
           return (
             <div
@@ -150,10 +189,19 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
             </div>
           );
         })}
-        {parsedLyrics.length === 0 && (
+        {lyricsLines.length === 0 && (
           <div className="h-full min-h-[220px] flex flex-col items-center justify-center text-white/40 space-y-2">
-            <Mic2 size={36} />
-            <p className="text-sm">No synchronized lyrics available for this track</p>
+            {lyricsLoading ? (
+              <>
+                <Loader2 size={32} className="animate-spin text-sky-400" />
+                <p className="text-sm">Fetching synchronized lyrics...</p>
+              </>
+            ) : (
+              <>
+                <Mic2 size={36} />
+                <p className="text-sm">No synchronized lyrics available for this track</p>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -186,7 +234,7 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
           return (
             <div
               key={`${track.id}-${idx}`}
-              onClick={() => playTrack(track)}
+              onClick={() => play(track, queue, idx)}
               className={`flex items-center gap-3 p-2.5 rounded-2xl cursor-pointer transition-colors group ${
                 isCurrent
                   ? 'bg-sky-500/20 border border-sky-400/40 text-white'
@@ -331,7 +379,7 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
             <button
               onClick={() => setShowTimerMenu(!showTimerMenu)}
               className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl transition-colors ${
-                sleepTimerMinutes
+                sleepTimerRemaining !== null
                   ? 'bg-sky-500/20 text-sky-400 border border-sky-400/40'
                   : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white'
               }`}
@@ -362,10 +410,10 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
                       {mins} minutes
                     </button>
                   ))}
-                  {sleepTimerMinutes && (
+                  {sleepTimerRemaining !== null && (
                     <button
                       onClick={() => {
-                        setSleepTimer(null);
+                        clearSleepTimer();
                         toast.info('Sleep timer cancelled');
                         setShowTimerMenu(false);
                       }}
@@ -765,7 +813,7 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
         isOpen={showShareLyrics}
         onClose={() => setShowShareLyrics(false)}
         track={currentTrack}
-        lyricsLines={parsedLyrics}
+        lyricsLines={lyricsLines}
         currentLineIndex={activeLyricIndex}
       />
     </motion.div>
