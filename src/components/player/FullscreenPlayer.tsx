@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePlayerStore } from '@/stores/playerStore';
 import { useLibraryStore } from '@/stores/libraryStore';
 import { useThemeStore } from '@/stores/themeStore';
@@ -9,6 +10,7 @@ import { EqualizerModal } from './EqualizerModal';
 import { ShareLyricsCard } from './ShareLyricsCard';
 import { formatTime } from '@/lib/format';
 import { musicAPI } from '@/api/musicAPI';
+import { downloadTrack } from '@/lib/download';
 import { toast } from 'sonner';
 import {
   Play, Pause, SkipBack, SkipForward,
@@ -16,7 +18,8 @@ import {
   ListMusic, Mic2, Loader2,
   Disc3, ChevronDown,
   Timer, Trash2, Music2,
-  Sliders, Gauge, Share2, Volume2, VolumeX
+  Sliders, Gauge, Share2, Volume2, VolumeX,
+  MoreVertical, Download, ListPlus, Users, X, Sparkles, Disc
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -30,6 +33,7 @@ interface LyricsLine {
 }
 
 export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
+  const navigate = useNavigate();
   const {
     currentTrack,
     isPlaying,
@@ -59,7 +63,7 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
   } = usePlayerStore();
 
   const { nowPlayingStyle, setNowPlayingStyle } = useThemeStore();
-  const { addToFavorites, removeFromFavorites, isFavorite } = useLibraryStore();
+  const { addToFavorites, removeFromFavorites, isFavorite, playlists, addToPlaylist } = useLibraryStore();
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
 
@@ -68,6 +72,8 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
   const [showEqualizer, setShowEqualizer] = useState(false);
   const [showShareLyrics, setShowShareLyrics] = useState(false);
   const [showTimerMenu, setShowTimerMenu] = useState(false);
+  const [showSongMenu, setShowSongMenu] = useState(false);
+  const [showPlaylistPicker, setShowPlaylistPicker] = useState(false);
   const [activeTab, setActiveTab] = useState<'player' | 'lyrics' | 'queue'>('player');
   const [rightPaneTab, setRightPaneTab] = useState<'lyrics' | 'queue'>('lyrics');
   const [justLiked, setJustLiked] = useState(false);
@@ -113,7 +119,7 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
     return () => {
       cancelled = true;
     };
-  }, [currentTrack?.id]);
+  }, [currentTrack]);
 
   // Find active lyrics index
   const activeLyricIndex = lyricsLines.findIndex((line, i) => {
@@ -299,7 +305,7 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
       />
       <div className="absolute inset-0 z-0 bg-gradient-to-b from-[#070b16]/75 via-[#070b16]/90 to-[#070b16] pointer-events-none" />
 
-      {/* ─── TOP BAR: Style Switcher & Controls ─── */}
+      {/* ─── TOP BAR: Style Switcher, Header Info & Controls (Matching Screenshot) ─── */}
       <header className="relative z-10 h-14 sm:h-16 w-full px-3 sm:px-6 flex items-center justify-between border-b border-white/10 shrink-0">
         {/* Left: Collapse button */}
         <button
@@ -310,72 +316,80 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
           <ChevronDown size={22} />
         </button>
 
-        {/* Center: SimpMusic 3-in-1 Style Switcher */}
-        <div className="flex items-center gap-0.5 sm:gap-1 p-0.5 sm:p-1 rounded-full bg-white/10 border border-white/15 backdrop-blur-xl">
+        {/* Center Mobile: NOW PLAYING + Source Subtitle (Matching Screenshot) */}
+        <div className="flex-1 flex flex-col items-center justify-center min-w-0 px-2 sm:hidden text-center">
+          <span className="text-[9px] font-bold tracking-widest uppercase text-white/45">NOW PLAYING</span>
+          <span className="text-xs font-semibold text-white/90 truncate max-w-[180px]">
+            {currentTrack.source === 'local' ? 'Downloaded' : currentTrack.album?.title || 'YouTube Music'}
+          </span>
+        </div>
+
+        {/* Center Tablet & Desktop: SimpMusic 3-in-1 Style Switcher */}
+        <div className="hidden sm:flex items-center gap-1 p-1 rounded-full bg-white/10 border border-white/15 backdrop-blur-xl">
           <button
             onClick={() => setNowPlayingStyle('m3-expressive')}
-            className={`px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold transition-all ${
+            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
               nowPlayingStyle === 'm3-expressive'
                 ? 'bg-sky-400 text-slate-950 shadow-md'
                 : 'text-white/70 hover:text-white'
             }`}
           >
-            {isMobile ? 'M3' : 'M3 Expressive'}
+            M3 Expressive
           </button>
           <button
             onClick={() => setNowPlayingStyle('apple-music')}
-            className={`px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold transition-all ${
+            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
               nowPlayingStyle === 'apple-music'
                 ? 'bg-pink-500 text-white shadow-md'
                 : 'text-white/70 hover:text-white'
             }`}
           >
-            {isMobile ? 'Apple' : 'Apple Music'}
+            Apple Music
           </button>
           <button
             onClick={() => setNowPlayingStyle('spotify')}
-            className={`px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold transition-all ${
+            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
               nowPlayingStyle === 'spotify'
                 ? 'bg-emerald-500 text-slate-950 shadow-md'
                 : 'text-white/70 hover:text-white'
             }`}
           >
-            {isMobile ? 'Spotify' : 'Spotify Classic'}
+            Spotify Classic
           </button>
         </div>
 
-        {/* Right: Signature SimpMusic Actions */}
+        {/* Right: Signature Actions & 3-Dots Menu */}
         <div className="flex items-center gap-1 sm:gap-2">
           {/* Share Lyrics Card button (Tablet & Desktop) */}
           <button
             onClick={() => setShowShareLyrics(true)}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white/80 hover:text-white text-xs font-medium border border-white/15 transition-colors"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white/80 hover:text-white text-xs font-medium border border-white/15 transition-colors"
             title="Create Share Lyrics Card"
           >
             <Share2 size={14} className="text-sky-400" />
             <span>Share Lyrics</span>
           </button>
 
-          {/* Speed & Pitch */}
+          {/* Speed & Pitch (Tablet & Desktop) */}
           <button
             onClick={() => setShowPitchSpeed(true)}
-            className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors"
+            className="hidden sm:flex w-8 h-8 sm:w-9 sm:h-9 items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors"
             title="Speed & Pitch"
           >
             <Gauge size={16} />
           </button>
 
-          {/* 10-Band Equalizer */}
+          {/* 10-Band Equalizer (Tablet & Desktop) */}
           <button
             onClick={() => setShowEqualizer(true)}
-            className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors"
+            className="hidden sm:flex w-8 h-8 sm:w-9 sm:h-9 items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors"
             title="Equalizer"
           >
             <Sliders size={16} />
           </button>
 
-          {/* Sleep Timer */}
-          <div className="relative">
+          {/* Sleep Timer (Tablet & Desktop) */}
+          <div className="relative hidden sm:block">
             <button
               onClick={() => setShowTimerMenu(!showTimerMenu)}
               className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl transition-colors ${
@@ -426,6 +440,16 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
               )}
             </AnimatePresence>
           </div>
+
+          {/* 3-DOTS OVERFLOW MENU (Matching Google Photos Screenshot) */}
+          <button
+            onClick={() => setShowSongMenu(true)}
+            className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-2xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white transition-colors"
+            title="Song Options"
+            aria-label="Song Options"
+          >
+            <MoreVertical size={19} />
+          </button>
         </div>
       </header>
 
@@ -816,6 +840,253 @@ export function FullscreenPlayer({ onCollapse }: FullscreenPlayerProps) {
         lyricsLines={lyricsLines}
         currentLineIndex={activeLyricIndex}
       />
+
+      {/* ─── SimpMusic Song Options Bottom Sheet (Matching Google Photos Screenshot) ─── */}
+      <AnimatePresence>
+        {showSongMenu && (
+          <div className="fixed inset-0 z-[80] flex flex-col justify-end">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSongMenu(false)}
+              className="absolute inset-0 bg-black/65 backdrop-blur-sm"
+            />
+
+            {/* Bottom Sheet Drawer */}
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+              className="relative z-10 w-full max-w-lg mx-auto bg-[#10141e]/95 backdrop-blur-2xl border-t border-white/15 rounded-t-[32px] px-4 pt-3 pb-8 shadow-[0_-12px_40px_rgba(0,0,0,0.8)] text-white select-none max-h-[85vh] overflow-y-auto scrollbar-none"
+            >
+              {/* Top Drag / Grab Bar */}
+              <div className="w-10 h-1 rounded-full bg-white/25 mx-auto mb-3.5" />
+
+              {/* Track Info Card */}
+              <div className="flex items-center gap-3.5 pb-3.5 border-b border-white/10">
+                <img
+                  src={currentTrack.thumbnail || ''}
+                  alt=""
+                  className="w-12 h-12 rounded-xl object-cover shadow-lg ring-1 ring-white/10"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-sm text-white truncate leading-snug">
+                    {currentTrack.title}
+                  </p>
+                  <p className="text-xs text-white/55 truncate mt-0.5">
+                    {currentTrack.artist?.name}
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Rows Matching Screenshot */}
+              <div className="py-2 space-y-0.5">
+                {/* 1. Like */}
+                <button
+                  onClick={() => {
+                    handleLike();
+                  }}
+                  className="w-full flex items-center gap-4 px-3 py-3 rounded-2xl hover:bg-white/8 active:bg-white/12 transition-colors text-left"
+                >
+                  <Heart
+                    size={20}
+                    className={liked ? 'text-[#FF4081]' : 'text-white/80'}
+                    fill={liked ? '#FF4081' : 'none'}
+                  />
+                  <span className="text-sm font-medium text-white">
+                    {liked ? 'Liked' : 'Like'}
+                  </span>
+                </button>
+
+                {/* 2. Downloaded / Download */}
+                <button
+                  onClick={async () => {
+                    try {
+                      await downloadTrack(currentTrack);
+                      toast.success(`Downloaded "${currentTrack.title}"`);
+                    } catch {
+                      toast.error('Download failed');
+                    }
+                  }}
+                  className="w-full flex items-center gap-4 px-3 py-3 rounded-2xl hover:bg-white/8 active:bg-white/12 transition-colors text-left"
+                >
+                  <div className="w-6 h-6 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center">
+                    <Download size={15} />
+                  </div>
+                  <span className="text-sm font-medium text-white">
+                    {currentTrack.source === 'local' ? 'Downloaded' : 'Downloaded'}
+                  </span>
+                </button>
+
+                {/* 3. Add to a playlist */}
+                <button
+                  onClick={() => setShowPlaylistPicker(true)}
+                  className="w-full flex items-center gap-4 px-3 py-3 rounded-2xl hover:bg-white/8 active:bg-white/12 transition-colors text-left"
+                >
+                  <ListPlus size={20} className="text-white/80" />
+                  <span className="text-sm font-medium text-white">Add to a playlist</span>
+                </button>
+
+                {/* 4. Artists */}
+                <button
+                  onClick={() => {
+                    setShowSongMenu(false);
+                    onCollapse();
+                    if (currentTrack.artist?.id) {
+                      navigate(`/artist/${currentTrack.artist.id}`);
+                    }
+                  }}
+                  className="w-full flex items-center gap-4 px-3 py-3 rounded-2xl hover:bg-white/8 active:bg-white/12 transition-colors text-left"
+                >
+                  <Users size={20} className="text-white/80" />
+                  <span className="text-sm font-medium text-white">Artists</span>
+                </button>
+
+                {/* 5. Share */}
+                <button
+                  onClick={async () => {
+                    setShowSongMenu(false);
+                    const shareData = {
+                      title: currentTrack.title,
+                      text: `Listen to ${currentTrack.title} by ${currentTrack.artist?.name} on SimpMusic`,
+                      url: window.location.origin + '/?v=' + (currentTrack.videoId || currentTrack.id),
+                    };
+                    if (navigator.share) {
+                      try {
+                        await navigator.share(shareData);
+                      } catch (_err) {
+                        // User cancelled share or share unavailable
+                      }
+                    } else {
+                      await navigator.clipboard.writeText(shareData.url);
+                      toast.success('Song link copied to clipboard!');
+                    }
+                  }}
+                  className="w-full flex items-center gap-4 px-3 py-3 rounded-2xl hover:bg-white/8 active:bg-white/12 transition-colors text-left"
+                >
+                  <Share2 size={20} className="text-white/80" />
+                  <span className="text-sm font-medium text-white">Share</span>
+                </button>
+
+                {/* 6. View Album */}
+                {currentTrack.album?.id && (
+                  <button
+                    onClick={() => {
+                      setShowSongMenu(false);
+                      onCollapse();
+                      navigate(`/album/${currentTrack.album?.id}`);
+                    }}
+                    className="w-full flex items-center gap-4 px-3 py-3 rounded-2xl hover:bg-white/8 active:bg-white/12 transition-colors text-left"
+                  >
+                    <Disc size={20} className="text-white/80" />
+                    <span className="text-sm font-medium text-white">View Album</span>
+                  </button>
+                )}
+
+                {/* 7. Equalizer */}
+                <button
+                  onClick={() => {
+                    setShowSongMenu(false);
+                    setShowEqualizer(true);
+                  }}
+                  className="w-full flex items-center gap-4 px-3 py-3 rounded-2xl hover:bg-white/8 active:bg-white/12 transition-colors text-left"
+                >
+                  <Sliders size={20} className="text-white/80" />
+                  <span className="text-sm font-medium text-white">Equalizer</span>
+                </button>
+
+                {/* 8. Sleep Timer */}
+                <button
+                  onClick={() => {
+                    setShowSongMenu(false);
+                    setShowTimerMenu(true);
+                  }}
+                  className="w-full flex items-center gap-4 px-3 py-3 rounded-2xl hover:bg-white/8 active:bg-white/12 transition-colors text-left"
+                >
+                  <Timer size={20} className="text-white/80" />
+                  <span className="text-sm font-medium text-white">
+                    Sleep Timer {sleepTimerRemaining ? `(${sleepTimerRemaining}m left)` : ''}
+                  </span>
+                </button>
+
+                {/* 9. Player Design Style */}
+                <button
+                  onClick={() => {
+                    const next = nowPlayingStyle === 'm3-expressive' ? 'apple-music' : nowPlayingStyle === 'apple-music' ? 'spotify' : 'm3-expressive';
+                    setNowPlayingStyle(next);
+                    toast.success(`Player style: ${next}`);
+                  }}
+                  className="w-full flex items-center gap-4 px-3 py-3 rounded-2xl hover:bg-white/8 active:bg-white/12 transition-colors text-left"
+                >
+                  <Sparkles size={20} className="text-sky-400" />
+                  <div className="flex-1 flex items-center justify-between">
+                    <span className="text-sm font-medium text-white">Now Playing Style</span>
+                    <span className="text-xs uppercase font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30">
+                      {nowPlayingStyle}
+                    </span>
+                  </div>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Playlist Picker Modal ─── */}
+      <AnimatePresence>
+        {showPlaylistPicker && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.94 }}
+              className="w-full max-w-sm rounded-3xl bg-[#101524] border border-white/15 p-5 shadow-2xl space-y-4 text-white"
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                  <ListPlus size={16} className="text-sky-400" />
+                  <span>Add to Playlist</span>
+                </h3>
+                <button
+                  onClick={() => setShowPlaylistPicker(false)}
+                  className="p-1 rounded-full hover:bg-white/10 text-white/60"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="max-h-60 overflow-y-auto space-y-1.5 scrollbar-thin pr-1">
+                {playlists.map(pl => (
+                  <button
+                    key={pl.id}
+                    onClick={() => {
+                      addToPlaylist(String(pl.id), currentTrack);
+                      toast.success(`Added to ${pl.title}`);
+                      setShowPlaylistPicker(false);
+                      setShowSongMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/8 transition-colors text-left"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+                      <ListMusic size={18} className="text-white/70" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold truncate text-white">{pl.title}</p>
+                      <p className="text-[10px] text-white/50">{pl.trackCount || 0} tracks</p>
+                    </div>
+                  </button>
+                ))}
+                {playlists.length === 0 && (
+                  <p className="text-xs text-center text-white/50 py-4">No custom playlists yet</p>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

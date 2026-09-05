@@ -688,7 +688,7 @@ export default function SettingsPage() {
                             if (!file) return;
 
                             const isVideo = file.type.startsWith('video/');
-                            const type = isVideo ? 'video' : 'image';
+                            const type: 'video' | 'image' = isVideo ? 'video' : 'image';
 
                             try {
                               await saveBackgroundData(file, type);
@@ -697,7 +697,7 @@ export default function SettingsPage() {
                               }
                               const newUrl = URL.createObjectURL(file);
                               setSetting('customBackgroundUrl', newUrl);
-                              setSetting('customBackgroundType', type as any);
+                              setSetting('customBackgroundType', type);
                             } catch (error) {
                               console.error('Failed to save background', error);
                             }
@@ -1080,9 +1080,10 @@ function AudioStreamSourceSettings() {
         setYoutubejsTestStatus({ testing: false, result: { ok: false, latencyMs, error: `HTTP ${res.status}` } });
         toast.error(`Health check failed: HTTP ${res.status}`);
       }
-    } catch (e: any) {
-      setYoutubejsTestStatus({ testing: false, result: { ok: false, latencyMs: Date.now() - start, error: e?.message } });
-      toast.error(`Health check error: ${e?.message}`);
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      setYoutubejsTestStatus({ testing: false, result: { ok: false, latencyMs: Date.now() - start, error: errorMsg } });
+      toast.error(`Health check error: ${errorMsg}`);
     }
   };
 
