@@ -6,14 +6,18 @@ import { formatTime } from '@/lib/format';
 import { musicAPI } from '@/api/musicAPI';
 import { toast } from 'sonner';
 import { FullscreenPlayer } from './FullscreenPlayer';
+import { WavySeekBar } from './WavySeekBar';
+import { PitchSpeedModal } from './PitchSpeedModal';
+import { EqualizerModal } from './EqualizerModal';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Play, Pause, SkipBack, SkipForward,
   Shuffle, Repeat, Repeat1, Heart,
   ListMusic, Mic2, Loader2,
   Disc3, FolderPlus, Plus,
-  Radio, Minimize2, ChevronUp, ChevronDown,
-  Volume2, VolumeX, MoreHorizontal, Copy, ExternalLink,
+  Minimize2, ChevronUp, ChevronDown,
+  Volume2, VolumeX, MoreHorizontal,
+  Sliders, Gauge,
   Infinity as InfinityIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -32,10 +36,10 @@ function AddToPlaylistMenu({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0, scale: 0.95, y: 8 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: 8 }}
-      className="absolute bottom-full mb-3 left-0 w-56 rounded-2xl bg-card/95 backdrop-blur-xl border border-border/60 shadow-2xl p-2 z-[70]"
+      className="absolute bottom-full mb-3 left-0 w-56 rounded-2xl bg-[#0e1626]/95 backdrop-blur-2xl border border-white/15 shadow-2xl p-2 z-[70] text-white"
       onClick={e => e.stopPropagation()}
     >
-      <div className="text-[11px] font-semibold text-muted-foreground px-2 py-1 uppercase tracking-wider">
+      <div className="text-[11px] font-semibold text-white/50 px-2 py-1 uppercase tracking-wider">
         Save to Playlist
       </div>
       <div className="max-h-48 overflow-y-auto space-y-0.5 py-1">
@@ -47,18 +51,18 @@ function AddToPlaylistMenu({ onClose }: { onClose: () => void }) {
               toast.success(`Added to ${pl.title}`);
               onClose();
             }}
-            className="flex items-center gap-2.5 w-full px-2.5 py-1.5 rounded-xl text-xs text-foreground hover:bg-accent transition-colors text-left"
+            className="flex items-center gap-2.5 w-full px-2.5 py-1.5 rounded-xl text-xs text-white hover:bg-white/10 transition-colors text-left"
           >
-            <ListMusic size={14} className="text-muted-foreground flex-shrink-0" />
+            <ListMusic size={14} className="text-white/50 flex-shrink-0" />
             <span className="truncate">{pl.title}</span>
           </button>
         ))}
         {playlists.length === 0 && (
-          <p className="text-xs text-muted-foreground/70 px-2 py-2 text-center">No playlists created</p>
+          <p className="text-xs text-white/50 px-2 py-2 text-center">No playlists created</p>
         )}
       </div>
 
-      <div className="pt-1.5 border-t border-border/40">
+      <div className="pt-1.5 border-t border-white/10">
         {showCreate ? (
           <div className="flex items-center gap-1.5 px-1 py-1">
             <input
@@ -75,7 +79,7 @@ function AddToPlaylistMenu({ onClose }: { onClose: () => void }) {
                   onClose();
                 }
               }}
-              className="flex-1 px-2 py-1 rounded-lg bg-background text-xs text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+              className="flex-1 px-2 py-1 rounded-lg bg-black/40 text-xs text-white border border-white/15 focus:outline-none focus:ring-1 focus:ring-sky-400"
             />
             <button
               onClick={() => {
@@ -86,7 +90,7 @@ function AddToPlaylistMenu({ onClose }: { onClose: () => void }) {
                   onClose();
                 }
               }}
-              className="px-2 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-medium"
+              className="px-2.5 py-1 rounded-lg bg-sky-500 text-slate-950 text-xs font-semibold"
             >
               Add
             </button>
@@ -94,7 +98,7 @@ function AddToPlaylistMenu({ onClose }: { onClose: () => void }) {
         ) : (
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-xl text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-xl text-xs text-white/70 hover:text-white hover:bg-white/10 transition-colors"
           >
             <Plus size={14} /> New playlist
           </button>
@@ -124,7 +128,7 @@ function TrackOptionsMenu({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0, scale: 0.95, y: 8 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: 8 }}
-      className="absolute bottom-full mb-3 left-16 w-52 rounded-2xl bg-card/95 backdrop-blur-xl border border-border/60 shadow-2xl p-1.5 z-[70]"
+      className="absolute bottom-full mb-3 left-16 w-52 rounded-2xl bg-[#0e1626]/95 backdrop-blur-2xl border border-white/15 shadow-2xl p-1.5 z-[70] text-white"
       onClick={e => e.stopPropagation()}
     >
       {currentTrack.album?.id && (
@@ -133,70 +137,71 @@ function TrackOptionsMenu({ onClose }: { onClose: () => void }) {
             navigate(`/playlist/${currentTrack.album?.id}`);
             onClose();
           }}
-          className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-xs text-foreground hover:bg-accent transition-colors text-left"
+          className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-xs text-white hover:bg-white/10 transition-colors text-left"
         >
-          <Disc3 size={14} className="text-muted-foreground" />
+          <Disc3 size={14} className="text-white/50" />
           <span className="truncate">Go to Album</span>
         </button>
       )}
 
-      {currentTrack.artist?.id && (
+      {currentTrack.artist?.name && (
         <button
           onClick={() => {
-            navigate(`/artist/${encodeURIComponent(currentTrack.artist.id)}`);
+            navigate(`/artist/${encodeURIComponent(currentTrack.artist?.id || currentTrack.artist?.name || 'unknown')}`);
             onClose();
           }}
-          className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-xs text-foreground hover:bg-accent transition-colors text-left"
+          className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-xs text-white hover:bg-white/10 transition-colors text-left"
         >
-          <ExternalLink size={14} className="text-muted-foreground" />
+          <Disc3 size={14} className="text-white/50" />
           <span className="truncate">Go to Artist</span>
         </button>
       )}
 
       <button
         onClick={copyTrackLink}
-        className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-xs text-foreground hover:bg-accent transition-colors text-left"
+        className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-xs text-white hover:bg-white/10 transition-colors text-left"
       >
-        <Copy size={14} className="text-muted-foreground" />
-        <span>Copy Stream Link</span>
+        <span className="truncate">Copy YouTube Music link</span>
       </button>
     </motion.div>
   );
 }
 
-// ─── Main Limusic-Style PlayerBar ───
 export function PlayerBar() {
+  const {
+    currentTrack,
+    isPlaying,
+    isLoading,
+    currentTime,
+    duration,
+    volume,
+    isMuted,
+    isShuffled,
+    repeatMode,
+    isRadioEnabled,
+    togglePlayPause,
+    next,
+    previous,
+    seek,
+    setVolume,
+    toggleMute,
+    toggleShuffle,
+    cycleRepeat,
+    toggleLyrics,
+    toggleQueue,
+    toggleMiniPlayer,
+    isLyricsOpen,
+    isQueueOpen,
+    isMiniPlayerOpen,
+  } = usePlayerStore();
+
   const [isExpanded, setIsExpanded] = useState(false);
+  const [justLiked, setJustLiked] = useState(false);
   const [showPlaylistMenu, setShowPlaylistMenu] = useState(false);
   const [showTrackMenu, setShowTrackMenu] = useState(false);
-  const [justLiked, setJustLiked] = useState(false);
-  const [seekDrag, setSeekDrag] = useState<number | null>(null);
-
-  const currentTrack = usePlayerStore(s => s.currentTrack);
-  const isPlaying = usePlayerStore(s => s.isPlaying);
-  const isLoading = usePlayerStore(s => s.isLoading);
-  const currentTime = usePlayerStore(s => s.currentTime);
-  const duration = usePlayerStore(s => s.duration);
-  const volume = usePlayerStore(s => s.volume);
-  const isMuted = usePlayerStore(s => s.isMuted);
-  const isShuffled = usePlayerStore(s => s.isShuffled);
-  const repeatMode = usePlayerStore(s => s.repeatMode);
-  const isRadioEnabled = usePlayerStore(s => s.isRadioEnabled);
-  const isQueueOpen = usePlayerStore(s => s.isQueueOpen);
-  const isLyricsOpen = usePlayerStore(s => s.isLyricsOpen);
-  const isMiniPlayerOpen = usePlayerStore(s => s.isMiniPlayerOpen);
-
-  const togglePlayPause = usePlayerStore(s => s.togglePlayPause);
-  const next = usePlayerStore(s => s.next);
-  const previous = usePlayerStore(s => s.previous);
-  const seek = usePlayerStore(s => s.seek);
-  const setVolume = usePlayerStore(s => s.setVolume);
-  const toggleMute = usePlayerStore(s => s.toggleMute);
-  const toggleShuffle = usePlayerStore(s => s.toggleShuffle);
-  const cycleRepeat = usePlayerStore(s => s.cycleRepeat);
-  const toggleQueue = usePlayerStore(s => s.toggleQueue);
-  const toggleLyrics = usePlayerStore(s => s.toggleLyrics);
-  const toggleMiniPlayer = usePlayerStore(s => s.toggleMiniPlayer);
+  const [showEqualizer, setShowEqualizer] = useState(false);
+  const [showPitchSpeed, setShowPitchSpeed] = useState(false);
+  const [useWavySeek, setUseWavySeek] = useState(true);
 
   const { addToFavorites, removeFromFavorites, isFavorite } = useLibraryStore();
   const isMobile = useIsMobile();
@@ -205,11 +210,10 @@ export function PlayerBar() {
   if (!currentTrack) return null;
 
   const liked = isFavorite(String(currentTrack.id));
-  const shownPosition = seekDrag ?? currentTime;
-  const seekPct = duration > 0 ? (shownPosition / duration) * 100 : 0;
+  const seekPct = duration > 0 ? (currentTime / duration) * 100 : 0;
   const volumePct = isMuted ? 0 : Math.round(volume * 100);
 
-  // Toggle favorite + YouTube Music rate API
+  // Toggle favorite with heart burst
   const handleLike = () => {
     const videoId = currentTrack.videoId || (String(currentTrack.id).startsWith('ytm_') ? String(currentTrack.id).slice(4) : String(currentTrack.id));
     if (!liked) {
@@ -228,17 +232,6 @@ export function PlayerBar() {
     }
   };
 
-  // Seek interactions
-  const handleSeekInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSeekDrag(Number(e.target.value));
-  };
-  const handleSeekCommit = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = Number(e.target.value);
-    setSeekDrag(null);
-    seek(val);
-  };
-
-  // Volume wheel scroll (+/- 5%)
   const handleVolumeWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
     const delta = e.deltaY < 0 ? 0.05 : -0.05;
@@ -246,14 +239,13 @@ export function PlayerBar() {
     setVolume(newVol);
   };
 
-  // Clicking empty area expands full player
   const handleBarClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest('button, input, a, [role="button"]')) return;
+    if (target.closest('button, input, a, [role="button"], canvas')) return;
     setIsExpanded(true);
   };
 
-  // ─── Mobile PlayerBar ───
+  // ─── Mobile View ───
   if (isMobile) {
     return (
       <>
@@ -267,14 +259,13 @@ export function PlayerBar() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 60, opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 350 }}
-              className="fixed z-[55] left-0 right-0 px-2.5"
+              className="fixed z-[55] left-2 right-2 px-1"
               style={{ bottom: 'calc(var(--bottom-nav-height, 64px) + 6px)' }}
             >
               <div
-                className="flex items-center gap-3 px-3 py-2 rounded-2xl bg-card/90 backdrop-blur-2xl border border-border/50 shadow-2xl relative overflow-hidden"
+                className="flex items-center gap-3 px-3 py-2 rounded-2xl bg-[#090e1d]/90 backdrop-blur-2xl border border-white/15 shadow-2xl relative overflow-hidden"
                 onClick={() => setIsExpanded(true)}
               >
-                {/* Thumbnail */}
                 <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-muted shadow-sm">
                   {currentTrack.thumbnail ? (
                     <img src={currentTrack.thumbnail} alt="" className="w-full h-full object-cover" />
@@ -285,13 +276,11 @@ export function PlayerBar() {
                   )}
                 </div>
 
-                {/* Track info */}
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-foreground truncate">{currentTrack.title}</p>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">{currentTrack.artist?.name}</p>
+                  <p className="text-sm font-semibold text-white truncate">{currentTrack.title}</p>
+                  <p className="text-xs text-white/60 truncate mt-0.5">{currentTrack.artist?.name}</p>
                 </div>
 
-                {/* Controls */}
                 <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                   <button
                     onClick={handleLike}
@@ -299,15 +288,15 @@ export function PlayerBar() {
                     onAnimationEnd={() => setJustLiked(false)}
                     aria-label="Like"
                   >
-                    <Heart size={18} className={liked ? 'fill-primary text-primary' : 'text-muted-foreground'} />
+                    <Heart size={18} className={liked ? 'fill-[#FF4081] text-[#FF4081]' : 'text-white/60'} />
                   </button>
                   <button
                     onClick={togglePlayPause}
-                    className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md ml-1"
+                    className="w-10 h-10 rounded-full bg-sky-400 text-slate-950 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md ml-1"
                     aria-label={isPlaying ? 'Pause' : 'Play'}
                   >
                     {isLoading ? (
-                      <Loader2 size={18} className="animate-spin" />
+                      <Loader2 size={18} className="animate-spin text-slate-950" />
                     ) : isPlaying ? (
                       <Pause size={18} fill="currentColor" />
                     ) : (
@@ -316,11 +305,10 @@ export function PlayerBar() {
                   </button>
                 </div>
 
-                {/* Bottom seek line */}
                 <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/10">
                   <div
-                    className="h-full bg-primary transition-[width] duration-100 ease-linear"
-                    style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                    className="h-full bg-sky-400 transition-[width] duration-100 ease-linear"
+                    style={{ width: `${seekPct}%` }}
                   />
                 </div>
               </div>
@@ -331,7 +319,7 @@ export function PlayerBar() {
     );
   }
 
-  // ─── Desktop Limusic PlayerBar ───
+  // ─── Desktop SimpMusic Liquid Glass PlayerBar ───
   return (
     <>
       <AnimatePresence>
@@ -341,40 +329,37 @@ export function PlayerBar() {
       <footer
         ref={barRef}
         onClick={handleBarClick}
-        className="fixed inset-x-0 bottom-0 z-50 h-[76px] bg-card/85 backdrop-blur-2xl border-t border-border/40 shadow-2xl flex items-center px-4 md:px-6 select-none transition-all duration-200"
+        className="fixed inset-x-3 bottom-2.5 z-50 h-[76px] rounded-2xl bg-[#090f20]/80 backdrop-blur-2xl border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center px-4 md:px-6 select-none transition-all duration-200"
       >
-        {/* ─── LEFT: Artwork & Song Meta ─── */}
+        {/* ─── LEFT: Artwork & Track Meta ─── */}
         <div className="min-w-0 flex-1 flex items-center gap-3.5 relative">
-          {/* Cover Art */}
-          <div className="w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-muted shadow-sm flex items-center justify-center ring-1 ring-white/10 group relative">
+          <div className="w-12 h-12 shrink-0 rounded-xl overflow-hidden bg-muted/20 shadow-md flex items-center justify-center ring-1 ring-white/15 group relative">
             {currentTrack.thumbnail ? (
               <img src={currentTrack.thumbnail} alt="" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
             ) : (
-              <Disc3 size={20} className="text-muted-foreground/60" />
+              <Disc3 size={20} className="text-white/40" />
             )}
           </div>
 
-          {/* Title & Artist */}
           <div className="min-w-0 flex-1 pr-2">
             <div className="flex items-center gap-1.5">
               {currentTrack.album?.id ? (
                 <Link
                   to={`/playlist/${currentTrack.album.id}`}
                   onClick={e => e.stopPropagation()}
-                  className="text-sm font-medium text-foreground hover:underline truncate"
+                  className="text-sm font-semibold text-white hover:text-sky-300 hover:underline truncate transition-colors"
                   title={currentTrack.title}
                 >
                   {currentTrack.title}
                 </Link>
               ) : (
-                <span className="text-sm font-medium text-foreground truncate" title={currentTrack.title}>
+                <span className="text-sm font-semibold text-white truncate" title={currentTrack.title}>
                   {currentTrack.title}
                 </span>
               )}
 
-              {/* Autoplay / Automix Indicator */}
               {(isRadioEnabled || (currentTrack as any).autoplay) && (
-                <span className="shrink-0 text-primary/80" title="Playing from Automix Radio">
+                <span className="shrink-0 text-sky-400" title="Playing from AutoMix Radio">
                   <InfinityIcon size={14} />
                 </span>
               )}
@@ -384,25 +369,25 @@ export function PlayerBar() {
               <Link
                 to={`/artist/${encodeURIComponent(currentTrack.artist?.id || currentTrack.artist?.name || 'unknown')}`}
                 onClick={e => e.stopPropagation()}
-                className="text-xs text-muted-foreground hover:text-foreground hover:underline truncate"
+                className="text-xs text-white/60 hover:text-white hover:underline truncate transition-colors"
               >
                 {currentTrack.artist?.name}
               </Link>
             </div>
           </div>
 
-          {/* Quick Actions: Like, Add, Menu */}
-          <div className="flex items-center gap-0.5 relative" onClick={e => e.stopPropagation()}>
+          {/* Action cluster: Like, Playlist, Menu */}
+          <div className="flex items-center gap-1 relative" onClick={e => e.stopPropagation()}>
             <button
               onClick={handleLike}
-              className={`p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors ${
+              className={`p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors ${
                 justLiked ? 'animate-heart-pop' : ''
               }`}
               onAnimationEnd={() => setJustLiked(false)}
               title={liked ? 'Unlike' : 'Like'}
               aria-label="Like"
             >
-              <Heart size={16} className={liked ? 'fill-primary text-primary' : ''} />
+              <Heart size={17} className={liked ? 'fill-[#FF4081] text-[#FF4081]' : ''} />
             </button>
 
             <button
@@ -410,13 +395,13 @@ export function PlayerBar() {
                 setShowPlaylistMenu(!showPlaylistMenu);
                 setShowTrackMenu(false);
               }}
-              className={`p-2 rounded-lg transition-colors ${
-                showPlaylistMenu ? 'text-primary bg-accent/60' : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+              className={`p-2 rounded-xl transition-colors ${
+                showPlaylistMenu ? 'text-sky-400 bg-sky-500/20' : 'text-white/60 hover:text-white hover:bg-white/10'
               }`}
               title="Save to playlist"
               aria-label="Save to playlist"
             >
-              <FolderPlus size={16} />
+              <FolderPlus size={17} />
             </button>
 
             <button
@@ -424,13 +409,13 @@ export function PlayerBar() {
                 setShowTrackMenu(!showTrackMenu);
                 setShowPlaylistMenu(false);
               }}
-              className={`p-2 rounded-lg transition-colors ${
-                showTrackMenu ? 'text-primary bg-accent/60' : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+              className={`p-2 rounded-xl transition-colors ${
+                showTrackMenu ? 'text-sky-400 bg-sky-500/20' : 'text-white/60 hover:text-white hover:bg-white/10'
               }`}
               title="More options"
               aria-label="More options"
             >
-              <MoreHorizontal size={16} />
+              <MoreHorizontal size={17} />
             </button>
 
             <AnimatePresence>
@@ -440,14 +425,13 @@ export function PlayerBar() {
           </div>
         </div>
 
-        {/* ─── CENTER: Transport & Seek Bar ─── */}
-        <div className="flex-[1.6] flex flex-col items-center gap-1 min-w-0 max-w-xl mx-auto px-4">
-          {/* Controls row */}
-          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+        {/* ─── CENTER: Transport & Wavy Seek Bar ─── */}
+        <div className="flex-[1.6] flex flex-col items-center gap-0.5 min-w-0 max-w-xl mx-auto px-4">
+          <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
             <button
               onClick={toggleShuffle}
-              className={`p-2 rounded-lg transition-colors ${
-                isShuffled ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+              className={`p-2 rounded-xl transition-colors ${
+                isShuffled ? 'text-sky-400 bg-sky-500/15' : 'text-white/60 hover:text-white hover:bg-white/10'
               }`}
               title={isShuffled ? 'Shuffle: ON' : 'Shuffle: OFF'}
               aria-label="Shuffle"
@@ -457,7 +441,7 @@ export function PlayerBar() {
 
             <button
               onClick={previous}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+              className="p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors"
               title="Previous"
               aria-label="Previous"
             >
@@ -466,12 +450,12 @@ export function PlayerBar() {
 
             <button
               onClick={togglePlayPause}
-              className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md mx-1"
+              className="w-10 h-10 rounded-full bg-gradient-to-r from-sky-400 to-cyan-300 text-slate-950 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_0_16px_rgba(142,202,230,0.4)] mx-1"
               title={isPlaying ? 'Pause' : 'Play'}
               aria-label={isPlaying ? 'Pause' : 'Play'}
             >
               {isLoading ? (
-                <Loader2 size={18} className="animate-spin" />
+                <Loader2 size={18} className="animate-spin text-slate-950" />
               ) : isPlaying ? (
                 <Pause size={18} fill="currentColor" />
               ) : (
@@ -481,7 +465,7 @@ export function PlayerBar() {
 
             <button
               onClick={next}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+              className="p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors"
               title="Next"
               aria-label="Next"
             >
@@ -490,8 +474,8 @@ export function PlayerBar() {
 
             <button
               onClick={cycleRepeat}
-              className={`p-2 rounded-lg transition-colors ${
-                repeatMode !== 'off' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+              className={`p-2 rounded-xl transition-colors ${
+                repeatMode !== 'off' ? 'text-sky-400 bg-sky-500/15' : 'text-white/60 hover:text-white hover:bg-white/10'
               }`}
               title={`Repeat: ${repeatMode}`}
               aria-label="Repeat"
@@ -500,38 +484,53 @@ export function PlayerBar() {
             </button>
           </div>
 
-          {/* Seek progress row */}
-          <div className="flex items-center gap-2.5 w-full text-xs text-muted-foreground select-none" onClick={e => e.stopPropagation()}>
-            <span className="tabular-nums font-mono text-[11px] w-8 text-right flex-shrink-0">
-              {formatTime(shownPosition)}
+          {/* Seek progress row with WavySeekBar */}
+          <div className="flex items-center gap-2.5 w-full text-xs text-white/60 select-none" onClick={e => e.stopPropagation()}>
+            <span className="tabular-nums font-mono text-[11px] w-8 text-right flex-shrink-0 text-white/70">
+              {formatTime(currentTime)}
             </span>
 
-            <input
-              type="range"
-              className="range flex-1"
-              style={{ '--pct': `${seekPct}%` } as React.CSSProperties}
-              min={0}
-              max={duration || 0}
-              step={0.1}
-              value={shownPosition}
-              onChange={handleSeekCommit}
-              onInput={handleSeekInput}
-              aria-label="Seek track"
-            />
+            <div className="flex-1">
+              <WavySeekBar
+                current={currentTime}
+                duration={duration}
+                isPlaying={isPlaying}
+                onSeek={seek}
+                wavy={useWavySeek}
+              />
+            </div>
 
-            <span className="tabular-nums font-mono text-[11px] w-8 flex-shrink-0">
+            <span className="tabular-nums font-mono text-[11px] w-8 flex-shrink-0 text-white/70">
               {formatTime(duration)}
             </span>
           </div>
         </div>
 
-        {/* ─── RIGHT: Volume & Floating Views ─── */}
+        {/* ─── RIGHT: Dynamics, Equalizer, Volume & Drawers ─── */}
         <div className="flex-1 flex items-center justify-end gap-1.5 md:gap-2 select-none" onClick={e => e.stopPropagation()}>
-          {/* Volume Control */}
-          <div className="hidden lg:flex items-center gap-1.5 mr-2" onWheel={handleVolumeWheel}>
+          {/* Speed & Pitch popup trigger */}
+          <button
+            onClick={() => setShowPitchSpeed(true)}
+            className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            title="Speed & Pitch controls"
+          >
+            <Gauge size={17} />
+          </button>
+
+          {/* Equalizer modal trigger */}
+          <button
+            onClick={() => setShowEqualizer(true)}
+            className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            title="10-Band Equalizer"
+          >
+            <Sliders size={17} />
+          </button>
+
+          {/* Volume slider with wheel */}
+          <div className="hidden lg:flex items-center gap-1.5 mr-1" onWheel={handleVolumeWheel}>
             <button
               onClick={toggleMute}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+              className="p-1.5 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors"
               title={isMuted || volume === 0 ? 'Unmute' : 'Mute'}
               aria-label="Mute toggle"
             >
@@ -554,8 +553,8 @@ export function PlayerBar() {
           {/* Mini Player */}
           <button
             onClick={toggleMiniPlayer}
-            className={`p-2 rounded-lg transition-colors ${
-              isMiniPlayerOpen ? 'text-primary bg-accent/60' : 'text-muted-foreground hover:text-foreground hover:bg-accent/40'
+            className={`p-2 rounded-xl transition-colors ${
+              isMiniPlayerOpen ? 'text-sky-400 bg-sky-500/20' : 'text-white/60 hover:text-white hover:bg-white/10'
             }`}
             title="Mini Player"
             aria-label="Mini Player"
@@ -563,11 +562,11 @@ export function PlayerBar() {
             <Minimize2 size={17} />
           </button>
 
-          {/* Lyrics */}
+          {/* Synced Lyrics */}
           <button
             onClick={toggleLyrics}
-            className={`p-2 rounded-lg transition-colors ${
-              isLyricsOpen ? 'text-primary bg-accent/60' : 'text-muted-foreground hover:text-foreground hover:bg-accent/40'
+            className={`p-2 rounded-xl transition-colors ${
+              isLyricsOpen ? 'text-sky-400 bg-sky-500/20' : 'text-white/60 hover:text-white hover:bg-white/10'
             }`}
             title="Synced Lyrics"
             aria-label="Lyrics"
@@ -575,11 +574,11 @@ export function PlayerBar() {
             <Mic2 size={17} />
           </button>
 
-          {/* Queue */}
+          {/* Queue Drawer */}
           <button
             onClick={toggleQueue}
-            className={`p-2 rounded-lg transition-colors ${
-              isQueueOpen ? 'text-primary bg-accent/60' : 'text-muted-foreground hover:text-foreground hover:bg-accent/40'
+            className={`p-2 rounded-xl transition-colors ${
+              isQueueOpen ? 'text-sky-400 bg-sky-500/20' : 'text-white/60 hover:text-white hover:bg-white/10'
             }`}
             title="Queue"
             aria-label="Queue"
@@ -587,10 +586,10 @@ export function PlayerBar() {
             <ListMusic size={17} />
           </button>
 
-          {/* Expand Now Playing View */}
+          {/* Fullscreen Expand Button */}
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors ml-0.5"
+            className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors ml-0.5"
             title={isExpanded ? 'Collapse player' : 'Expand now playing'}
             aria-label="Now playing sheet"
           >
@@ -598,6 +597,12 @@ export function PlayerBar() {
           </button>
         </div>
       </footer>
+
+      {/* Speed & Pitch Dialog */}
+      <PitchSpeedModal isOpen={showPitchSpeed} onClose={() => setShowPitchSpeed(false)} />
+
+      {/* 10-Band Equalizer Dialog */}
+      <EqualizerModal isOpen={showEqualizer} onClose={() => setShowEqualizer(false)} />
     </>
   );
 }

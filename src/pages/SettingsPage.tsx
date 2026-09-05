@@ -609,16 +609,16 @@ export default function SettingsPage() {
 
               {activeTab === 'nowplaying' && (
                 <div>
-                  <h2 className="font-display font-semibold text-base mb-3">Now Playing</h2>
-                  <SettingRow label="Now Playing Style" description="Layout of the now playing view">
-                    <Select<NowPlayingStyle>
-                      value={settings.nowPlayingStyle}
+                  <h2 className="font-display font-semibold text-base mb-3">SimpMusic Now Playing</h2>
+                  <SettingRow label="Now Playing Screen Style" description="Select your preferred SimpMusic player design">
+                    <Select<'m3-expressive' | 'apple-music' | 'spotify'>
+                      value={useThemeStore.getState().nowPlayingStyle}
                       options={[
-                        { value: 'default', label: 'Default' },
-                        { value: 'fullscreen', label: 'Fullscreen' },
-                        { value: 'minimal', label: 'Minimal' },
+                        { value: 'm3-expressive', label: 'Material 3 Expressive (Tonal & Wavy)' },
+                        { value: 'apple-music', label: 'Apple Music (Fluid Gradient & Karaoke)' },
+                        { value: 'spotify', label: 'Spotify Classic (Clean & Immersive)' },
                       ]}
-                      onChange={(v) => setSetting('nowPlayingStyle', v)}
+                      onChange={(v) => useThemeStore.getState().setNowPlayingStyle(v)}
                     />
                   </SettingRow>
                   <SettingRow label="Fullscreen on Cover Click" description="Enter fullscreen when clicking album art">

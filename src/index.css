@@ -545,6 +545,38 @@ section[aria-label="Notifications alt+T"] {
   animation: heart-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+/* SimpMusic Liquid Glass styling */
+.simp-liquid-glass {
+  background: rgba(18, 24, 38, 0.72);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.simp-liquid-glass-subtle {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px) saturate(130%);
+  -webkit-backdrop-filter: blur(20px) saturate(130%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.simp-glass-pill {
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.simp-card-hover {
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.simp-card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.45);
+}
+
 /* Limusic range slider (seek & volume) driven by --pct */
 input[type='range'].range {
   -webkit-appearance: none;
@@ -578,4 +610,4 @@ input[type='range'].range:active::-webkit-slider-thumb {
   opacity: 1;
   transform: scale(1.25);
 }
-}
+}

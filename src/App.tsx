@@ -8,6 +8,9 @@ import HomePage from "@/pages/Home";
 import SearchPage from "@/pages/SearchPage";
 import ExplorePage from "@/pages/ExplorePage";
 import LibraryPage from "@/pages/LibraryPage";
+import AnalyticsPage from "@/pages/AnalyticsPage";
+import WrappedPage from "@/pages/WrappedPage";
+import ListenTogetherPage from "@/pages/ListenTogetherPage";
 import ArtistPage from "@/pages/ArtistPage";
 import PlaylistPage from "@/pages/PlaylistPage";
 import SettingsPage from "@/pages/SettingsPage";
@@ -27,6 +30,9 @@ const App = () => (
             <Route path="/" element={<HomePage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/explore" element={<ExplorePage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/wrapped" element={<WrappedPage />} />
+            <Route path="/listen-together" element={<ListenTogetherPage />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/library/:section" element={<LibraryPage />} />
             <Route path="/artist/:id" element={<ArtistPage />} />

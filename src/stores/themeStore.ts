@@ -1,4 +1,4 @@
-// Theme system for customizable colors
+// SimpMusic Theme System & Design Tokens
 import { create } from 'zustand';
 
 export interface ThemeColors {
@@ -19,101 +19,86 @@ export interface Theme {
   isBuiltIn?: boolean;
 }
 
-const BUILT_IN_THEMES: Theme[] = [
+export const SIMPMUSIC_THEMES: Theme[] = [
   {
-    id: 'default-purple',
-    name: 'Midnight Purple',
-    author: 'Melodies',
+    id: 'liquid-glass-dark',
+    name: 'Liquid Glass (SimpMusic)',
+    author: 'SimpMusic',
     isBuiltIn: true,
     colors: {
-      background: '260 60% 6%',
-      foreground: '260 20% 95%',
-      primary: '265 90% 60%',
-      secondary: '260 40% 15%',
-      accent: '265 50% 22%',
-      muted: '260 35% 18%',
-      card: '260 45% 12%',
+      background: '224 45% 6%',
+      foreground: '210 30% 96%',
+      primary: '197 68% 73%', // #8ECAE6 (SimpMusic Brand Cyan)
+      secondary: '222 35% 14%',
+      accent: '197 70% 32%',
+      muted: '222 28% 18%',
+      card: '223 35% 10%',
     },
   },
   {
-    id: 'ocean-blue',
-    name: 'Ocean Blue',
-    author: 'Melodies',
+    id: 'material-3-expressive',
+    name: 'Material 3 Expressive',
+    author: 'SimpMusic',
     isBuiltIn: true,
     colors: {
-      background: '220 60% 6%',
+      background: '230 30% 7%',
       foreground: '220 20% 95%',
-      primary: '210 90% 55%',
-      secondary: '220 40% 15%',
-      accent: '210 50% 22%',
-      muted: '220 35% 18%',
-      card: '220 45% 12%',
+      primary: '265 89% 75%',
+      secondary: '230 25% 16%',
+      accent: '265 60% 30%',
+      muted: '230 20% 20%',
+      card: '230 25% 12%',
     },
   },
   {
-    id: 'rose-gold',
-    name: 'Rose Gold',
-    author: 'Melodies',
+    id: 'apple-music-dark',
+    name: 'Apple Music Dynamic',
+    author: 'SimpMusic',
     isBuiltIn: true,
     colors: {
-      background: '350 30% 6%',
-      foreground: '350 15% 95%',
-      primary: '340 80% 60%',
-      secondary: '350 30% 15%',
-      accent: '340 40% 22%',
-      muted: '350 25% 18%',
-      card: '350 35% 12%',
+      background: '240 20% 5%',
+      foreground: '0 0% 98%',
+      primary: '346 84% 61%',
+      secondary: '240 16% 14%',
+      accent: '346 60% 28%',
+      muted: '240 14% 18%',
+      card: '240 18% 9%',
     },
   },
   {
-    id: 'forest-green',
-    name: 'Forest Green',
-    author: 'Melodies',
+    id: 'amoled-black',
+    name: 'AMOLED Pure Black',
+    author: 'SimpMusic',
     isBuiltIn: true,
     colors: {
-      background: '150 40% 5%',
-      foreground: '150 15% 95%',
-      primary: '142 70% 45%',
-      secondary: '150 30% 14%',
-      accent: '142 40% 20%',
-      muted: '150 25% 17%',
-      card: '150 35% 11%',
+      background: '0 0% 2%',
+      foreground: '0 0% 96%',
+      primary: '197 68% 73%',
+      secondary: '0 0% 10%',
+      accent: '197 60% 25%',
+      muted: '0 0% 14%',
+      card: '0 0% 6%',
     },
   },
   {
-    id: 'amber-warm',
-    name: 'Amber Warmth',
-    author: 'Melodies',
+    id: 'ocean-cyan',
+    name: 'Ocean Cyan',
+    author: 'SimpMusic',
     isBuiltIn: true,
     colors: {
-      background: '30 40% 5%',
-      foreground: '30 15% 95%',
-      primary: '38 90% 50%',
-      secondary: '30 30% 14%',
-      accent: '35 40% 20%',
-      muted: '30 25% 17%',
-      card: '30 35% 11%',
-    },
-  },
-  {
-    id: 'monochrome',
-    name: 'Monochrome',
-    author: 'Melodies',
-    isBuiltIn: true,
-    colors: {
-      background: '0 0% 5%',
-      foreground: '0 0% 95%',
-      primary: '0 0% 70%',
-      secondary: '0 0% 14%',
-      accent: '0 0% 20%',
-      muted: '0 0% 17%',
-      card: '0 0% 11%',
+      background: '200 45% 6%',
+      foreground: '200 20% 96%',
+      primary: '190 90% 50%',
+      secondary: '200 35% 14%',
+      accent: '190 60% 25%',
+      muted: '200 25% 18%',
+      card: '200 35% 10%',
     },
   },
   {
     id: 'cyberpunk',
-    name: 'Cyberpunk',
-    author: 'Melodies',
+    name: 'Cyberpunk Neon',
+    author: 'SimpMusic',
     isBuiltIn: true,
     colors: {
       background: '280 50% 4%',
@@ -130,21 +115,30 @@ const BUILT_IN_THEMES: Theme[] = [
 interface ThemeState {
   activeThemeId: string;
   customThemes: Theme[];
+  nowPlayingStyle: 'm3-expressive' | 'apple-music' | 'spotify';
   getActiveTheme: () => Theme;
   getAllThemes: () => Theme[];
   setActiveTheme: (id: string) => void;
+  setNowPlayingStyle: (style: 'm3-expressive' | 'apple-music' | 'spotify') => void;
   addCustomTheme: (theme: Omit<Theme, 'id'>) => void;
   removeCustomTheme: (id: string) => void;
 }
 
-const STORAGE_KEY = 'melodies_theme';
+const STORAGE_KEY = 'simpmusic_theme';
+const NOW_PLAYING_STORAGE_KEY = 'simpmusic_now_playing_style';
 
 function loadThemeState() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return JSON.parse(stored);
+    const storedStyle = localStorage.getItem(NOW_PLAYING_STORAGE_KEY) as 'm3-expressive' | 'apple-music' | 'spotify' | null;
+    const parsed = stored ? JSON.parse(stored) : {};
+    return {
+      activeThemeId: parsed.activeThemeId || 'liquid-glass-dark',
+      customThemes: parsed.customThemes || [],
+      nowPlayingStyle: storedStyle || 'apple-music',
+    };
   } catch { /* */ }
-  return { activeThemeId: 'default-purple', customThemes: [] };
+  return { activeThemeId: 'liquid-glass-dark', customThemes: [], nowPlayingStyle: 'apple-music' as const };
 }
 
 function saveThemeState(state: { activeThemeId: string; customThemes: Theme[] }) {
@@ -158,11 +152,11 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 
   getActiveTheme: () => {
     const { activeThemeId, customThemes } = get();
-    return [...BUILT_IN_THEMES, ...customThemes].find(t => t.id === activeThemeId) || BUILT_IN_THEMES[0];
+    return [...SIMPMUSIC_THEMES, ...customThemes].find(t => t.id === activeThemeId) || SIMPMUSIC_THEMES[0];
   },
 
   getAllThemes: () => {
-    return [...BUILT_IN_THEMES, ...get().customThemes];
+    return [...SIMPMUSIC_THEMES, ...get().customThemes];
   },
 
   setActiveTheme: (id) => {
@@ -170,6 +164,13 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     const state = get();
     saveThemeState({ activeThemeId: id, customThemes: state.customThemes });
     applyTheme(state.getActiveTheme());
+  },
+
+  setNowPlayingStyle: (style) => {
+    set({ nowPlayingStyle: style });
+    try {
+      localStorage.setItem(NOW_PLAYING_STORAGE_KEY, style);
+    } catch {}
   },
 
   addCustomTheme: (theme) => {
@@ -185,7 +186,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   removeCustomTheme: (id) => {
     set(s => {
       const customThemes = s.customThemes.filter(t => t.id !== id);
-      const activeThemeId = s.activeThemeId === id ? 'default-purple' : s.activeThemeId;
+      const activeThemeId = s.activeThemeId === id ? 'liquid-glass-dark' : s.activeThemeId;
       saveThemeState({ activeThemeId, customThemes });
       return { customThemes, activeThemeId };
     });
@@ -213,10 +214,14 @@ export function applyTheme(theme: Theme) {
   root.style.setProperty('--ring', colors.primary);
   root.style.setProperty('--sidebar-background', `${colors.background.split(' ')[0]} 50% 8%`);
   root.style.setProperty('--sidebar-primary', colors.primary);
+  // SimpMusic semantic tokens
+  root.style.setProperty('--simp-favorite', '#FF4081');
+  root.style.setProperty('--simp-lyric-active', '#FFFF00');
+  root.style.setProperty('--simp-seed', '#8ECAE6');
 }
 
 // Initialize theme on load
-const initialTheme = useThemeStore.getState().getActiveTheme();
-if (initialTheme.id !== 'default-purple') {
+if (typeof window !== 'undefined') {
+  const initialTheme = useThemeStore.getState().getActiveTheme();
   applyTheme(initialTheme);
 }
