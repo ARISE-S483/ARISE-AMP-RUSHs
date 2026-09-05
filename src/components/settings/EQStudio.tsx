@@ -2,13 +2,37 @@ import { useState } from 'react';
 import { GraphicEQ } from './GraphicEQ';
 import { ParametricEQ } from './ParametricEQ';
 import { AutoEQ } from './AutoEQ';
+import { useEqualizerStore } from '@/stores/equalizerStore';
+import { Power } from 'lucide-react';
 // import { SpeakerEQ } from './SpeakerEQ';
 
 export function EQStudio() {
   const [activeTab, setActiveTab] = useState<'legacy' | 'parametric' | 'autoeq' | 'speaker'>('legacy');
+  const { enabled, setEnabled, preset } = useEqualizerStore();
 
   return (
-    <div className="mt-4 border rounded-lg bg-card/30 overflow-hidden">
+    <div className="mt-4 border rounded-xl bg-card/30 overflow-hidden border-white/10">
+      {/* Studio Header Bar */}
+      <div className="flex items-center justify-between px-4 py-2.5 bg-background/80 border-b border-white/10">
+        <div className="flex items-center gap-2">
+          <span className="text-xs uppercase font-bold tracking-wider text-white/70">Audio DSP Studio</span>
+          <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-400/30">
+            {preset}
+          </span>
+        </div>
+
+        <button
+          onClick={() => setEnabled(!enabled)}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+            enabled
+              ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/40 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+              : 'bg-white/5 text-white/50 border-white/10 hover:bg-white/10'
+          }`}
+        >
+          <Power size={13} className={enabled ? 'text-cyan-400' : 'text-white/40'} />
+          <span>{enabled ? 'DSP Active' : 'DSP Bypassed'}</span>
+        </button>
+      </div>
       {/* Tabs */}
       <div className="flex border-b bg-background/50 text-sm">
         <button

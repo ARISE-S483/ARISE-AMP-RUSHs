@@ -47,11 +47,23 @@ export function GraphicEQ() {
     return (f / 1000).toFixed(0) + 'K';
   };
 
-  if (!enabled) return null;
-
   return (
     <div className="pt-2">
-      <h3 className="text-sm font-semibold mb-4 text-cyan-300">Graphic Equalizer (Legacy)</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-cyan-300">Graphic Equalizer (Legacy)</h3>
+        <button
+          onClick={() => setEnabled(!enabled)}
+          className={`px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${
+            enabled
+              ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/40'
+              : 'bg-white/5 text-white/50 border-white/10 hover:bg-white/10'
+          }`}
+        >
+          {enabled ? 'Active' : 'Enable Equalizer'}
+        </button>
+      </div>
+
+      <div className={`transition-opacity ${enabled ? '' : 'opacity-40 pointer-events-none'}`}>
       
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div>
@@ -147,6 +159,7 @@ export function GraphicEQ() {
           onChange={(e) => setPreamp(Number(e.target.value))}
           className="w-full h-1 bg-border rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-cyan-400"
         />
+      </div>
       </div>
     </div>
   );
