@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react';
 import { usePlayerStore } from '@/stores/playerStore';
 import { useLibraryStore } from '@/stores/libraryStore';
+import { musicAPI } from '@/api/musicAPI';
 import type { Track } from '@/api/types';
-import { Play, Clock } from 'lucide-react';
+import { Play, Clock, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,6 +17,17 @@ export function QuickPicks() {
   const play = usePlayerStore(s => s.play);
   const currentTrack = usePlayerStore(s => s.currentTrack);
   const navigate = useNavigate();
+  const [fallbackTracks, setFallbackTracks] = useState<Track[]>([]);
+
+  useEffect(() => {
+    if (recentlyPlayed.length === 0 && favorites.length === 0 && playlists.length === 0) {
+      musicAPI.getTrending().then(tracks => {
+        if (tracks && tracks.length > 0) {
+          setFallbackTracks(tracks.slice(0, 6));
+        }
+      }).catch(() => {});
+    }
+  }, [recentlyPlayed.length, favorites.length, playlists.length]);
 
   type Tile = {
     id: string;
@@ -54,21 +67,31 @@ export function QuickPicks() {
     isActive: false,
   }));
 
+  const fallbackTiles: Tile[] = fallbackTracks.map((t, idx) => ({
+    id: `fallback-${t.id}`,
+    title: t.title,
+    subtitle: t.artist.name,
+    thumbnail: t.thumbnail || '',
+    onClick: () => { play(t, fallbackTracks, idx); },
+    isActive: !!(currentTrack && String(currentTrack.id) === String(t.id)),
+  }));
+
   const tiles = [...recentTiles];
   if (favTile) tiles.splice(2, 0, favTile);
   tiles.push(...playlistTiles);
   const displayTiles = tiles.slice(0, 6);
+  const activeTiles = displayTiles.length > 0 ? displayTiles : fallbackTiles;
 
-  if (displayTiles.length === 0) return null;
+  if (activeTiles.length === 0) return null;
 
   return (
     <motion.section variants={fadeUp}>
       <h2 className="font-display text-lg md:text-xl font-semibold mb-3 flex items-center gap-2">
-        <Clock size={18} className="text-muted-foreground" />
-        Quick Picks
+        <Clock size={18} className="text-sky-400" />
+        {displayTiles.length > 0 ? 'Quick Picks' : 'Speed Dial & Quick Picks'}
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-        {displayTiles.map(tile => (
+        {activeTiles.map(tile => (
           <motion.button
             key={tile.id}
             whileHover={{ scale: 1.02, y: -2 }}

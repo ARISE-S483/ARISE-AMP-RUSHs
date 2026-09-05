@@ -30,6 +30,8 @@ const App = () => (
             <Route path="/" element={<HomePage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/explore" element={<ExplorePage />} />
+            <Route path="/explore/:genre" element={<ExplorePage />} />
+            <Route path="/charts" element={<ExplorePage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/wrapped" element={<WrappedPage />} />
             <Route path="/listen-together" element={<ListenTogetherPage />} />
@@ -37,6 +39,8 @@ const App = () => (
             <Route path="/library/:section" element={<LibraryPage />} />
             <Route path="/artist/:id" element={<ArtistPage />} />
             <Route path="/playlist/:id" element={<PlaylistPage />} />
+            <Route path="/playlist/local/:localId" element={<PlaylistPage />} />
+            <Route path="/album/:id" element={<PlaylistPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

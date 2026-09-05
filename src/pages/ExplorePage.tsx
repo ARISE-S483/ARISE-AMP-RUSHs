@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useParams, useLocation } from 'react-router-dom';
 import { musicAPI } from '@/api/musicAPI';
 import type { Track, Album, Artist } from '@/api/types';
 import { TrackCard, AlbumCard, ArtistCard } from '@/components/common/MediaCards';
@@ -25,6 +26,8 @@ const fadeUp = {
 };
 
 export default function ExplorePage() {
+  const { genre } = useParams<{ genre?: string }>();
+  const location = useLocation();
   const [trendingSections, setTrendingSections] = useState<Record<string, Track[]>>({});
   const [genreTracks, setGenreTracks] = useState<Record<string, Track[]>>({});
   const [loading, setLoading] = useState(true);
@@ -60,6 +63,13 @@ export default function ExplorePage() {
     } catch { /* ignore */ }
     setGenreLoading(false);
   };
+
+  useEffect(() => {
+    if (genre) {
+      const decoded = decodeURIComponent(genre);
+      loadGenre(decoded);
+    }
+  }, [genre]);
 
   return (
     <motion.div

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Search, Maximize2, Minimize2, Radio, Sparkles, X, Minus, Square } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Maximize2, Minimize2, Radio, Sparkles, X, Minus, Square, Settings } from 'lucide-react';
 import { SimpLogo } from '@/components/common/SimpLogo';
 import { usePlayerStore } from '@/stores/playerStore';
 import { useDeviceType } from '@/hooks/use-mobile';
@@ -126,6 +126,20 @@ export function CustomTitleBar({ onSearchOpen }: CustomTitleBarProps) {
 
         {/* Account Menu */}
         <AccountMenu />
+
+        {/* Quick Settings Action (Mobile, Tablet, Desktop) */}
+        <button
+          onClick={() => navigate('/settings')}
+          className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
+            location.pathname === '/settings'
+              ? 'bg-sky-500/20 text-sky-300 border border-sky-400/40 shadow-[0_0_8px_rgba(142,202,230,0.3)]'
+              : 'hover:bg-white/10 text-white/70 hover:text-white'
+          }`}
+          title="SimpMusic Settings"
+          aria-label="Settings"
+        >
+          <Settings size={15} />
+        </button>
 
         {/* Fullscreen Toggle (Tablet & Desktop) */}
         <button
