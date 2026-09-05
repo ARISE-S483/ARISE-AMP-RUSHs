@@ -3,8 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings, Volume2, Download, Palette, Music, Mic2, Activity,
   LayoutDashboard, RotateCcw, ChevronRight, Radio, Brush, Database, Upload, FolderDown,
-  User, Headphones, Music2, Key, LogIn, LogOut, RefreshCw, ExternalLink
+  User, Headphones, Music2, Key, LogIn, LogOut, RefreshCw, ExternalLink,
+  Info, Sparkles, Sliders, Check
 } from 'lucide-react';
+import { SimpLogo } from '@/components/common/SimpLogo';
 import { EQStudio } from '../components/settings/EQStudio';
 import { exportLibrary, importLibrary } from '@/lib/syncExport';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -27,18 +29,14 @@ import type {
 import { saveBackgroundData } from '@/lib/backgroundStore';
 
 const tabs = [
-  { id: 'profile', label: 'Profile', icon: User },
-  { id: 'account', label: 'YouTube Music', icon: Music2 },
-  { id: 'audio', label: 'Audio', icon: Volume2 },
-  { id: 'downloads', label: 'Downloads', icon: Download },
-  { id: 'appearance', label: 'Appearance', icon: Palette },
-  { id: 'themes', label: 'Themes', icon: Brush },
-  { id: 'nowplaying', label: 'Now Playing', icon: Music },
-  { id: 'lyrics', label: 'Lyrics', icon: Mic2 },
-  { id: 'visualizer', label: 'Visualizer', icon: Activity },
-  { id: 'sidebar', label: 'Sidebar', icon: LayoutDashboard },
+  { id: 'appearance', label: 'Appearance & Themes', icon: Palette },
+  { id: 'audio', label: 'Player & Audio', icon: Volume2 },
+  { id: 'lyrics', label: 'Lyrics & Display', icon: Mic2 },
+  { id: 'account', label: 'Content & YouTube', icon: Music2 },
+  { id: 'downloads', label: 'Downloads & Storage', icon: Download },
   { id: 'integrations', label: 'Integrations', icon: Radio },
-  { id: 'data', label: 'Data', icon: Database },
+  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'about', label: 'About SimpMusic', icon: Info },
 ] as const;
 
 type TabId = typeof tabs[number]['id'];
@@ -160,7 +158,7 @@ function ThemePicker() {
 }
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<TabId>('profile');
+  const [activeTab, setActiveTab] = useState<TabId>('appearance');
   const { toast } = useToast();
   const settings = useSettingsStore();
   const setSetting = settings.setSetting;
@@ -196,44 +194,79 @@ export default function SettingsPage() {
   }, [lastfm, toast]);
 
   return (
-    <motion.div className="p-4 md:p-6 max-w-4xl mx-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <div className="flex items-center gap-3 mb-6">
-        <Settings size={24} className="text-muted-foreground" />
-        <h1 className="font-display text-xl md:text-2xl font-bold">Settings</h1>
+    <motion.div className="p-3 sm:p-5 md:p-6 max-w-5xl mx-auto pb-32 select-none" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      {/* SimpMusic Settings Brand Header */}
+      <div className="flex items-center justify-between gap-3 mb-5 pb-3.5 border-b border-white/10">
+        <div className="flex items-center gap-3">
+          <SimpLogo size={32} />
+          <div>
+            <h1 className="font-display text-xl sm:text-2xl font-extrabold bg-gradient-to-r from-sky-300 via-cyan-200 to-indigo-300 bg-clip-text text-transparent">
+              SimpMusic Settings
+            </h1>
+            <p className="text-xs text-white/50">Playback engine, Liquid Glass design, and audio features</p>
+          </div>
+        </div>
+        <span className="hidden sm:inline-flex text-[11px] font-mono font-semibold px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30">
+          v0.8.2-dev
+        </span>
       </div>
 
-      <div className="flex gap-6 flex-col md:flex-row">
-        {/* Tab nav */}
-        <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0 md:w-48 flex-shrink-0">
-          {tabs.map(tab => (
+      {/* Mobile Tab nav (Horizontal chips) */}
+      <div className="flex md:hidden gap-1.5 overflow-x-auto pb-3 mb-3 scrollbar-none">
+        {tabs.map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-all duration-200 ${
-                activeTab === tab.id
-                  ? 'bg-accent text-foreground font-medium'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs whitespace-nowrap font-medium transition-all ${
+                isActive
+                  ? 'bg-gradient-to-r from-sky-500 to-cyan-400 text-slate-950 font-bold shadow-[0_0_12px_rgba(142,202,230,0.4)]'
+                  : 'bg-white/5 text-white/70 border border-white/10 hover:bg-white/10'
               }`}
             >
-              <tab.icon size={16} strokeWidth={1.5} />
-              {tab.label}
-              {activeTab === tab.id && <ChevronRight size={12} className="ml-auto hidden md:block" />}
+              <tab.icon size={13} />
+              <span>{tab.label}</span>
             </button>
-          ))}
+          );
+        })}
+      </div>
 
-          <div className="border-t border-border mt-2 pt-2">
+      <div className="flex gap-6 flex-col md:flex-row items-start">
+        {/* Desktop & Tablet Sidebar Tab nav */}
+        <nav className="hidden md:flex flex-col gap-1 w-56 shrink-0 p-2 rounded-2xl bg-[#080d1a]/85 backdrop-blur-2xl border border-white/10 shadow-xl self-start">
+          {tabs.map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                  isActive
+                    ? 'bg-sky-500/20 text-sky-300 border border-sky-400/40 shadow-[0_0_12px_rgba(142,202,230,0.25)]'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <tab.icon size={16} className={isActive ? 'text-sky-300' : 'text-white/50'} />
+                <span>{tab.label}</span>
+                {isActive && <ChevronRight size={13} className="ml-auto text-sky-400" />}
+              </button>
+            );
+          })}
+
+          <div className="border-t border-white/10 mt-2 pt-2">
             <button
               onClick={settings.resetSettings}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors w-full"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-red-400 hover:bg-red-500/10 transition-colors w-full"
             >
-              <RotateCcw size={16} strokeWidth={1.5} />
-              Reset All
+              <RotateCcw size={15} />
+              <span>Reset Settings</span>
             </button>
           </div>
         </nav>
 
         {/* Content */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 w-full">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -241,7 +274,7 @@ export default function SettingsPage() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -8 }}
               transition={{ duration: 0.15 }}
-              className="glass-card rounded-xl p-4 md:p-5"
+              className="rounded-3xl bg-[#080d1a]/80 border border-white/10 backdrop-blur-2xl p-4 sm:p-6 shadow-2xl space-y-4"
             >
               {activeTab === 'profile' && (
                 <div>
@@ -517,136 +550,238 @@ export default function SettingsPage() {
                       className="bg-secondary text-foreground text-xs rounded-lg px-3 py-1.5 outline-none border border-border focus:ring-1 focus:ring-primary/20 w-48"
                     />
                   </SettingRow>
+
+                  {/* Cache & Offline Storage */}
+                  <div className="border-t border-white/10 pt-5 mt-4">
+                    <h3 className="font-display font-semibold text-sm text-sky-400 mb-2 flex items-center gap-2">
+                      <Database size={16} />
+                      Cache & Offline Storage
+                    </h3>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Manage temporary audio streams and album artwork cached in your browser
+                    </p>
+                    <div className="flex flex-wrap gap-2.5">
+                      <button
+                        onClick={async () => {
+                          try {
+                            if ('caches' in window) {
+                              const keys = await window.caches.keys();
+                              for (const key of keys) {
+                                if (key.includes('audio') || key.includes('media') || key.includes('workbox')) {
+                                  await window.caches.delete(key);
+                                }
+                              }
+                            }
+                            toast({ title: 'Audio cache cleared' });
+                          } catch {
+                            toast({ title: 'Failed to clear audio cache', variant: 'destructive' });
+                          }
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white/80 transition-colors flex items-center gap-2"
+                      >
+                        <RotateCcw size={14} className="text-sky-400" />
+                        Clear Audio Cache
+                      </button>
+
+                      <button
+                        onClick={async () => {
+                          try {
+                            if ('caches' in window) {
+                              const keys = await window.caches.keys();
+                              for (const key of keys) {
+                                if (key.includes('image') || key.includes('artwork')) {
+                                  await window.caches.delete(key);
+                                }
+                              }
+                            }
+                            toast({ title: 'Artwork cache cleared' });
+                          } catch {
+                            toast({ title: 'Failed to clear artwork cache', variant: 'destructive' });
+                          }
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white/80 transition-colors flex items-center gap-2"
+                      >
+                        <Brush size={14} className="text-cyan-400" />
+                        Clear Artwork Cache
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Library Export / Import */}
+                  <div className="border-t border-white/10 pt-5 mt-4">
+                    <DataManagement />
+                  </div>
                 </div>
               )}
 
               {activeTab === 'appearance' && (
-                <div>
-                  <h2 className="font-display font-semibold text-base mb-3">Appearance</h2>
-                  <SettingRow label="Background Image" description="Choose your app wallpaper">
-                    <Select<BackgroundImage>
-                      value={settings.backgroundImage}
-                      options={[
-                        { value: 'blue-mountains', label: 'Blue Mountains' },
-                        { value: 'cosmic-purple', label: 'Cosmic Purple' },
-                        { value: 'dark-forest', label: 'Dark Forest' },
-                        { value: 'neon-city', label: 'Neon City' },
-                        { value: 'valkyrie', label: 'Valkyrie Forest (Live)' },
-                        { value: 'custom', label: 'Custom Upload' },
-                        { value: 'none', label: 'None (Solid)' },
-                      ]}
-                      onChange={(v) => setSetting('backgroundImage', v)}
-                    />
-                  </SettingRow>
-                  {settings.backgroundImage === 'custom' && (
-                    <SettingRow label="Custom Media" description="Upload a local image or video">
-                      <input
-                        type="file"
-                        accept="image/*,video/*"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
+                <div className="space-y-6">
+                  {/* Theme Selector */}
+                  <ThemePicker />
 
-                          const isVideo = file.type.startsWith('video/');
-                          const type = isVideo ? 'video' : 'image';
-
-                          try {
-                            await saveBackgroundData(file, type);
-                            if (settings.customBackgroundUrl?.startsWith('blob:')) {
-                              URL.revokeObjectURL(settings.customBackgroundUrl);
-                            }
-                            const newUrl = URL.createObjectURL(file);
-                            setSetting('customBackgroundUrl', newUrl);
-                            setSetting('customBackgroundType', type as any);
-                          } catch (error) {
-                            console.error('Failed to save background', error);
-                          }
-                        }}
-                        className="file:mr-4 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 text-xs text-muted-foreground w-48"
+                  {/* SimpMusic Now Playing Style */}
+                  <div className="border-t border-white/10 pt-5">
+                    <h3 className="font-display font-semibold text-sm text-sky-400 mb-3 flex items-center gap-2">
+                      <Sparkles size={16} />
+                      SimpMusic Now Playing Style
+                    </h3>
+                    <SettingRow label="Player Design Style" description="Choose your preferred SimpMusic player layout">
+                      <Select<'m3-expressive' | 'apple-music' | 'spotify'>
+                        value={useThemeStore.getState().nowPlayingStyle}
+                        options={[
+                          { value: 'm3-expressive', label: 'Material 3 Expressive (Tonal & Wavy)' },
+                          { value: 'apple-music', label: 'Apple Music (Fluid Gradient & Karaoke)' },
+                          { value: 'spotify', label: 'Spotify Classic (Clean & Immersive)' },
+                        ]}
+                        onChange={(v) => useThemeStore.getState().setNowPlayingStyle(v)}
                       />
                     </SettingRow>
-                  )}
-                  <SettingRow label="Overlay Opacity" description="Darken overlay on background image">
-                    <NumberInput value={settings.backgroundOverlayOpacity} onChange={(v) => setSetting('backgroundOverlayOpacity', v)} min={0} max={100} suffix="%" />
-                  </SettingRow>
-                  <SettingRow label="Background Blur" description="Adjust background blur intensity">
-                    <NumberInput value={settings.backgroundBlurAmount ?? 2} onChange={(v) => setSetting('backgroundBlurAmount', v)} min={0} max={100} suffix="px" />
-                  </SettingRow>
-                  <SettingRow label="Glass Opacity" description="Adjust transparency of UI panels (0% = clear)">
-                    <NumberInput value={settings.glassOpacity ?? 10} onChange={(v) => setSetting('glassOpacity', v)} min={0} max={100} suffix="%" />
-                  </SettingRow>
-                  <SettingRow label="Glass Blur" description="Adjust the frosted glass blur effect (0% = clear)">
-                    <NumberInput value={settings.glassBlur ?? 30} onChange={(v) => setSetting('glassBlur', v)} min={0} max={100} suffix="%" />
-                  </SettingRow>
-                  <SettingRow label="Background Style" description="Player background effect">
-                    <Select<BackgroundStyle>
-                      value={settings.backgroundStyle}
-                      options={[
-                        { value: 'none', label: 'None' },
-                        { value: 'blur', label: 'Album Blur' },
-                        { value: 'gradient', label: 'Gradient' },
-                        { value: 'solid', label: 'Solid' },
-                      ]}
-                      onChange={(v) => setSetting('backgroundStyle', v)}
-                    />
-                  </SettingRow>
-                  <SettingRow label="Dynamic Colors" description="Adapt UI colors to album artwork">
-                    <Toggle checked={settings.dynamicColors} onChange={(v) => setSetting('dynamicColors', v)} />
-                  </SettingRow>
-                  <SettingRow label="Quality Badge" description="Show audio quality indicator on tracks">
-                    <Toggle checked={settings.showQualityBadge} onChange={(v) => setSetting('showQualityBadge', v)} />
-                  </SettingRow>
-                  <SettingRow label="Track Date" description="Show release date on tracks">
-                    <Toggle checked={settings.showTrackDate} onChange={(v) => setSetting('showTrackDate', v)} />
-                  </SettingRow>
-                  <SettingRow label="Animated Covers" description="Show video covers for supported albums">
-                    <Toggle checked={settings.animatedCovers} onChange={(v) => setSetting('animatedCovers', v)} />
-                  </SettingRow>
-                </div>
-              )}
+                    <SettingRow label="Fullscreen on Cover Click" description="Enter fullscreen when clicking album art">
+                      <Toggle checked={settings.fullscreenOnClick} onChange={(v) => setSetting('fullscreenOnClick', v)} />
+                    </SettingRow>
 
-              {activeTab === 'themes' && <ThemePicker />}
-
-              {activeTab === 'nowplaying' && (
-                <div>
-                  <h2 className="font-display font-semibold text-base mb-3">SimpMusic Now Playing</h2>
-                  <SettingRow label="Now Playing Screen Style" description="Select your preferred SimpMusic player design">
-                    <Select<'m3-expressive' | 'apple-music' | 'spotify'>
-                      value={useThemeStore.getState().nowPlayingStyle}
-                      options={[
-                        { value: 'm3-expressive', label: 'Material 3 Expressive (Tonal & Wavy)' },
-                        { value: 'apple-music', label: 'Apple Music (Fluid Gradient & Karaoke)' },
-                        { value: 'spotify', label: 'Spotify Classic (Clean & Immersive)' },
-                      ]}
-                      onChange={(v) => useThemeStore.getState().setNowPlayingStyle(v)}
-                    />
-                  </SettingRow>
-                  <SettingRow label="Fullscreen on Cover Click" description="Enter fullscreen when clicking album art">
-                    <Toggle checked={settings.fullscreenOnClick} onChange={(v) => setSetting('fullscreenOnClick', v)} />
-                  </SettingRow>
-
-                  <div className="mt-6 mb-3">
-                    <h3 className="font-display font-semibold text-sm text-primary">Fullscreen Player Appearance</h3>
+                    <div className="mt-4 mb-2">
+                      <h4 className="text-xs font-semibold text-white/80">Fullscreen Glass & Blur</h4>
+                    </div>
+                    <SettingRow label="Overlay Opacity" description="Darken overlay on fullscreen background">
+                      <NumberInput value={settings.fsBackgroundOverlayOpacity ?? 50} onChange={(v) => setSetting('fsBackgroundOverlayOpacity', v)} min={0} max={100} suffix="%" />
+                    </SettingRow>
+                    <SettingRow label="Background Blur" description="Adjust fullscreen background blur intensity">
+                      <NumberInput value={settings.fsBackgroundBlurAmount ?? 80} onChange={(v) => setSetting('fsBackgroundBlurAmount', v)} min={0} max={100} suffix="px" />
+                    </SettingRow>
+                    <SettingRow label="Glass Opacity" description="Adjust background art opacity">
+                      <NumberInput value={settings.fsGlassOpacity ?? 40} onChange={(v) => setSetting('fsGlassOpacity', v)} min={0} max={100} suffix="%" />
+                    </SettingRow>
+                    <SettingRow label="Glass Blur" description="Adjust extra frosted glass blur">
+                      <NumberInput value={settings.fsGlassBlur ?? 30} onChange={(v) => setSetting('fsGlassBlur', v)} min={0} max={100} suffix="%" />
+                    </SettingRow>
                   </div>
-                  <SettingRow label="Overlay Opacity" description="Darken overlay on fullscreen background">
-                    <NumberInput value={settings.fsBackgroundOverlayOpacity ?? 50} onChange={(v) => setSetting('fsBackgroundOverlayOpacity', v)} min={0} max={100} suffix="%" />
-                  </SettingRow>
-                  <SettingRow label="Background Blur" description="Adjust fullscreen background blur intensity">
-                    <NumberInput value={settings.fsBackgroundBlurAmount ?? 80} onChange={(v) => setSetting('fsBackgroundBlurAmount', v)} min={0} max={100} suffix="px" />
-                  </SettingRow>
-                  <SettingRow label="Glass Opacity" description="Adjust background art opacity">
-                    <NumberInput value={settings.fsGlassOpacity ?? 40} onChange={(v) => setSetting('fsGlassOpacity', v)} min={0} max={100} suffix="%" />
-                  </SettingRow>
-                  <SettingRow label="Glass Blur" description="Adjust extra frosted glass blur">
-                    <NumberInput value={settings.fsGlassBlur ?? 30} onChange={(v) => setSetting('fsGlassBlur', v)} min={0} max={100} suffix="%" />
-                  </SettingRow>
+
+                  {/* Wallpaper & Glass Surface */}
+                  <div className="border-t border-white/10 pt-5">
+                    <h3 className="font-display font-semibold text-sm text-sky-400 mb-3 flex items-center gap-2">
+                      <Brush size={16} />
+                      Wallpaper & Liquid Glass Surface
+                    </h3>
+                    <SettingRow label="Background Wallpaper" description="Choose your app wallpaper">
+                      <Select<BackgroundImage>
+                        value={settings.backgroundImage}
+                        options={[
+                          { value: 'blue-mountains', label: 'Blue Mountains' },
+                          { value: 'cosmic-purple', label: 'Cosmic Purple' },
+                          { value: 'dark-forest', label: 'Dark Forest' },
+                          { value: 'neon-city', label: 'Neon City' },
+                          { value: 'valkyrie', label: 'Valkyrie Forest (Live)' },
+                          { value: 'custom', label: 'Custom Upload' },
+                          { value: 'none', label: 'None (Solid)' },
+                        ]}
+                        onChange={(v) => setSetting('backgroundImage', v)}
+                      />
+                    </SettingRow>
+                    {settings.backgroundImage === 'custom' && (
+                      <SettingRow label="Custom Media" description="Upload a local image or video">
+                        <input
+                          type="file"
+                          accept="image/*,video/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+
+                            const isVideo = file.type.startsWith('video/');
+                            const type = isVideo ? 'video' : 'image';
+
+                            try {
+                              await saveBackgroundData(file, type);
+                              if (settings.customBackgroundUrl?.startsWith('blob:')) {
+                                URL.revokeObjectURL(settings.customBackgroundUrl);
+                              }
+                              const newUrl = URL.createObjectURL(file);
+                              setSetting('customBackgroundUrl', newUrl);
+                              setSetting('customBackgroundType', type as any);
+                            } catch (error) {
+                              console.error('Failed to save background', error);
+                            }
+                          }}
+                          className="file:mr-4 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 text-xs text-muted-foreground w-48"
+                        />
+                      </SettingRow>
+                    )}
+                    <SettingRow label="Overlay Opacity" description="Darken overlay on background image">
+                      <NumberInput value={settings.backgroundOverlayOpacity} onChange={(v) => setSetting('backgroundOverlayOpacity', v)} min={0} max={100} suffix="%" />
+                    </SettingRow>
+                    <SettingRow label="Background Blur" description="Adjust background blur intensity">
+                      <NumberInput value={settings.backgroundBlurAmount ?? 2} onChange={(v) => setSetting('backgroundBlurAmount', v)} min={0} max={100} suffix="px" />
+                    </SettingRow>
+                    <SettingRow label="Liquid Glass Opacity" description="Adjust transparency of UI panels (0% = clear)">
+                      <NumberInput value={settings.glassOpacity ?? 10} onChange={(v) => setSetting('glassOpacity', v)} min={0} max={100} suffix="%" />
+                    </SettingRow>
+                    <SettingRow label="Liquid Glass Blur" description="Adjust the frosted glass blur effect (0% = clear)">
+                      <NumberInput value={settings.glassBlur ?? 30} onChange={(v) => setSetting('glassBlur', v)} min={0} max={100} suffix="%" />
+                    </SettingRow>
+                    <SettingRow label="Background Style" description="Player background effect">
+                      <Select<BackgroundStyle>
+                        value={settings.backgroundStyle}
+                        options={[
+                          { value: 'none', label: 'None' },
+                          { value: 'blur', label: 'Album Blur' },
+                          { value: 'gradient', label: 'Gradient' },
+                          { value: 'solid', label: 'Solid' },
+                        ]}
+                        onChange={(v) => setSetting('backgroundStyle', v)}
+                      />
+                    </SettingRow>
+                    <SettingRow label="Dynamic Colors" description="Adapt UI colors dynamically to album artwork">
+                      <Toggle checked={settings.dynamicColors} onChange={(v) => setSetting('dynamicColors', v)} />
+                    </SettingRow>
+                    <SettingRow label="Quality Badge" description="Show audio quality indicator on tracks">
+                      <Toggle checked={settings.showQualityBadge} onChange={(v) => setSetting('showQualityBadge', v)} />
+                    </SettingRow>
+                    <SettingRow label="Track Date" description="Show release date on tracks">
+                      <Toggle checked={settings.showTrackDate} onChange={(v) => setSetting('showTrackDate', v)} />
+                    </SettingRow>
+                    <SettingRow label="Animated Covers" description="Show video covers for supported albums">
+                      <Toggle checked={settings.animatedCovers} onChange={(v) => setSetting('animatedCovers', v)} />
+                    </SettingRow>
+                  </div>
+
+                  {/* Visualizer & Sidebar */}
+                  <div className="border-t border-white/10 pt-5">
+                    <h3 className="font-display font-semibold text-sm text-sky-400 mb-3 flex items-center gap-2">
+                      <Sliders size={16} />
+                      Visualizer & Interface Sections
+                    </h3>
+                    <SettingRow label="Visualizer Style" description="Audio visualization type">
+                      <Select<VisualizerStyle>
+                        value={settings.visualizerStyle}
+                        options={[
+                          { value: 'bars', label: 'Bars' },
+                          { value: 'wave', label: 'Wave' },
+                          { value: 'circular', label: 'Circular' },
+                          { value: 'none', label: 'Disabled' },
+                        ]}
+                        onChange={(v) => setSetting('visualizerStyle', v)}
+                      />
+                    </SettingRow>
+                    <SettingRow label="Dimming" description="Dim visuals to reduce distraction">
+                      <Toggle checked={settings.visualizerDimming} onChange={(v) => setSetting('visualizerDimming', v)} />
+                    </SettingRow>
+                    <SettingRow label="Recently Played" description="Show recently played section">
+                      <Toggle checked={settings.showRecentlyPlayed} onChange={(v) => setSetting('showRecentlyPlayed', v)} />
+                    </SettingRow>
+                    <SettingRow label="Favorites" description="Show favorites section">
+                      <Toggle checked={settings.showFavorites} onChange={(v) => setSetting('showFavorites', v)} />
+                    </SettingRow>
+                    <SettingRow label="Playlists" description="Show playlists section">
+                      <Toggle checked={settings.showPlaylists} onChange={(v) => setSetting('showPlaylists', v)} />
+                    </SettingRow>
+                  </div>
                 </div>
               )}
 
               {activeTab === 'lyrics' && (
-                <div>
-                  <h2 className="font-display font-semibold text-base mb-3">Lyrics</h2>
-                  <SettingRow label="Enable Lyrics" description="Show lyrics panel option">
+                <div className="space-y-4">
+                  <h2 className="font-display font-semibold text-base mb-3">Lyrics & Synchronized Display</h2>
+                  <SettingRow label="Enable Lyrics" description="Show lyrics panel and Fullscreen lyrics view">
                     <Toggle checked={settings.lyricsEnabled} onChange={(v) => setSetting('lyricsEnabled', v)} />
                   </SettingRow>
                   <SettingRow label="Font Size" description="Lyrics text size">
@@ -660,44 +795,11 @@ export default function SettingsPage() {
                       onChange={(v) => setSetting('lyricsSize', v)}
                     />
                   </SettingRow>
-                  <SettingRow label="Karaoke Mode" description="Highlight current lyric line in sync">
+                  <SettingRow label="Karaoke Synchronized Mode" description="Highlight and scroll current lyric line in real-time">
                     <Toggle checked={settings.karaokeMode} onChange={(v) => setSetting('karaokeMode', v)} />
                   </SettingRow>
-                </div>
-              )}
-
-              {activeTab === 'visualizer' && (
-                <div>
-                  <h2 className="font-display font-semibold text-base mb-3">Visualizer</h2>
-                  <SettingRow label="Visualizer Style" description="Audio visualization type">
-                    <Select<VisualizerStyle>
-                      value={settings.visualizerStyle}
-                      options={[
-                        { value: 'bars', label: 'Bars' },
-                        { value: 'wave', label: 'Wave' },
-                        { value: 'circular', label: 'Circular' },
-                        { value: 'none', label: 'Disabled' },
-                      ]}
-                      onChange={(v) => setSetting('visualizerStyle', v)}
-                    />
-                  </SettingRow>
-                  <SettingRow label="Dimming" description="Dim visuals to reduce distraction">
-                    <Toggle checked={settings.visualizerDimming} onChange={(v) => setSetting('visualizerDimming', v)} />
-                  </SettingRow>
-                </div>
-              )}
-
-              {activeTab === 'sidebar' && (
-                <div>
-                  <h2 className="font-display font-semibold text-base mb-3">Sidebar Sections</h2>
-                  <SettingRow label="Recently Played" description="Show recently played section">
-                    <Toggle checked={settings.showRecentlyPlayed} onChange={(v) => setSetting('showRecentlyPlayed', v)} />
-                  </SettingRow>
-                  <SettingRow label="Favorites" description="Show favorites section">
-                    <Toggle checked={settings.showFavorites} onChange={(v) => setSetting('showFavorites', v)} />
-                  </SettingRow>
-                  <SettingRow label="Playlists" description="Show playlists section">
-                    <Toggle checked={settings.showPlaylists} onChange={(v) => setSetting('showPlaylists', v)} />
+                  <SettingRow label="Romaji Lyrics" description="Convert Japanese lyrics to Romaji (Latin characters)">
+                    <Toggle checked={settings.romajiLyrics} onChange={(v) => setSetting('romajiLyrics', v)} />
                   </SettingRow>
                 </div>
               )}
@@ -837,14 +939,64 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              {activeTab === 'data' && (
-                <DataManagement />
+              {activeTab === 'about' && (
+                <AboutSimpMusic />
               )}
             </motion.div>
           </AnimatePresence>
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function AboutSimpMusic() {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col items-center justify-center text-center p-6 rounded-3xl bg-gradient-to-b from-sky-500/10 via-white/5 to-transparent border border-white/10 backdrop-blur-2xl">
+        <SimpLogo size={56} />
+        <h2 className="text-2xl font-extrabold text-white mt-3 bg-gradient-to-r from-sky-300 via-cyan-200 to-indigo-300 bg-clip-text text-transparent">
+          SimpMusic
+        </h2>
+        <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30 mt-1">
+          v0.8.2-dev (Cross-Platform)
+        </span>
+        <p className="text-xs text-white/60 max-w-md mt-3 leading-relaxed">
+          A beautiful, open-source YouTube Music client featuring Liquid Glass aesthetic, Material 3 Expressive player, synchronized karaoke lyrics, and offline audio downloads.
+        </p>
+      </div>
+
+      {/* Info Rows */}
+      <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3 text-xs">
+        <div className="flex items-center justify-between py-2 border-b border-white/10">
+          <span className="text-white/60 font-medium">Original Repository</span>
+          <a
+            href="https://github.com/maxrave-dev/SimpMusic"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1 hover:underline"
+          >
+            <span>maxrave-dev/SimpMusic</span>
+            <ExternalLink size={12} />
+          </a>
+        </div>
+        <div className="flex items-center justify-between py-2 border-b border-white/10">
+          <span className="text-white/60 font-medium">Author</span>
+          <span className="text-white font-medium">maxrave-dev & Open Source Community</span>
+        </div>
+        <div className="flex items-center justify-between py-2 border-b border-white/10">
+          <span className="text-white/60 font-medium">License</span>
+          <span className="text-white font-medium">GNU General Public License v3.0</span>
+        </div>
+        <div className="flex items-center justify-between py-2">
+          <span className="text-white/60 font-medium">Audio Source Pipeline</span>
+          <span className="text-emerald-400 font-medium flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            YouTube Music 256kbps Opus (Preserved)
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
 
